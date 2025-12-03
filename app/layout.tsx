@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Taska",
-  description: "HCSでの「書く」をAIで「助ける」。あなたの学校生活に、頼れるAIアシスタント。",
+  description:
+    "HCSでの「書く」をAIで「助ける」。あなたの学校生活に、頼れるAIアシスタント。",
 };
 
 export default function RootLayout({
