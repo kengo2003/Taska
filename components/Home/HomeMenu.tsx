@@ -19,6 +19,11 @@ const HomeMenu = () => {
         link="/"
         className="w-full bg-linear-to-b from-[#29CEEB] to-[#177585]"
       />
+      <MenuButton
+        text="管理者"
+        link="/admin"
+        className="w-full bg-linear-to-br from-green-500 to-teal-600 text-white"
+      />
     </div>
   );
 };
