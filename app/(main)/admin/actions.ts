@@ -1,6 +1,7 @@
 "use server";
 
 import { FileData, DocumentListItem, kb } from "@/types/type";
+import { error } from "console";
 
 const BASE_URL = process.env.BACKEND_API_URL;
 const API_TOKEN = process.env.API_TOKEN;
@@ -98,6 +99,29 @@ export async function getDocumentsByKbId(kbId: string): Promise<FileData[]> {
     });
   } catch (error) {
     console.error("getDocumentsByKbId error:", error);
+    return [];
+  }
+}
+
+export async function deleteDocuments(kbId: string, fileId: string) {
+  if (!BASE_URL) throw new Error("BACKEND_API_URL is not defined");
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/v1/datasets/${kbId}/documents/${fileId}`,
+      {
+        method: "DELETE",
+        cache: "no-store",
+        headers: getHeaders(),
+      }
+    );
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("deleteDocuments API error:", errorText);
+      throw new Error(`${res.status}:${res.statusText}`);
+    }
+  } catch (error) {
+    console.error("deleteDocuments error:", error);
     return [];
   }
 }

@@ -17,16 +17,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, Edit2, Trash2, Check, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Eye, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
 import { FileData } from "@/types/type";
-import { getDocumentsByKbId } from "@/app/(main)/admin/actions";
+import {
+  getDocumentsByKbId,
+  deleteDocuments,
+} from "@/app/(main)/admin/actions";
 
 export function FileListSection({ kbId }: { kbId: string }) {
   const [files, setFiles] = useState<FileData[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [deletingFile, setDeletingFile] = useState<FileData | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
 
@@ -50,11 +64,6 @@ export function FileListSection({ kbId }: { kbId: string }) {
     setSelectedFile(file);
   };
 
-  const handleEdit = (file: FileData) => {
-    setEditingId(Number(file.id));
-    setEditingFileName(file.fileName);
-  };
-
   const handleSave = (fileId: number) => {
     setFiles(
       files.map((file) =>
@@ -72,8 +81,25 @@ export function FileListSection({ kbId }: { kbId: string }) {
     setEditingFileName("");
   };
 
-  const handleDelete = (file: FileData) => {
-    alert(`削除: ${file.fileName}`);
+  const handleConfirmDelete = (file: FileData) => {
+    setDeletingFile(file);
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deletingFile) return;
+
+    try {
+      await deleteDocuments(kbId, deletingFile.id);
+
+      setFiles((prev) => prev.filter((f) => f.id !== deletingFile.id));
+
+      console.log(`削除: ${deletingFile.fileName}が完了`);
+    } catch (error) {
+      console.error("deleteDocuments error:", error);
+      alert("削除に失敗しました");
+    } finally {
+      setDeletingFile(null);
+    }
   };
 
   return (
@@ -165,17 +191,7 @@ export function FileListSection({ kbId }: { kbId: string }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEdit(file)}
-                        title="編集"
-                        className="h-8 w-8 p-0"
-                        disabled={editingId !== null}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(file)}
+                        onClick={() => handleConfirmDelete(file)}
                         title="削除"
                         className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                       >
@@ -234,6 +250,30 @@ export function FileListSection({ kbId }: { kbId: string }) {
           </div>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={!!deletingFile}
+        onOpenChange={() => setDeletingFile(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              ファイル名: <b>{deletingFile?.fileName}</b>
+              <br />
+              この操作は取り消せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExecuteDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
