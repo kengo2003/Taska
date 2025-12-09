@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -20,27 +20,47 @@ import {
 import { Eye, Edit2, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
 import { FileData } from "@/types/type";
-import { TEST_FILES } from "@/test/TestFileData";
+import { getDocumentsByKbId } from "@/app/(main)/admin/actions";
 
-export function FileListSection() {
+export function FileListSection({ kbId }: { kbId: string }) {
+  const [files, setFiles] = useState<FileData[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
-  const [files, setFiles] = useState<FileData[]>(TEST_FILES);
+
+  useEffect(() => {
+    const loadFiles = async () => {
+      setLoading(true);
+      try {
+        const data = await getDocumentsByKbId(kbId);
+        setFiles(data);
+      } catch (error) {
+        console.error("ファイルの取得に失敗しました", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFiles();
+  }, [kbId]);
 
   const handlePreview = (file: FileData) => {
     setSelectedFile(file);
   };
 
   const handleEdit = (file: FileData) => {
-    setEditingId(file.id);
+    setEditingId(Number(file.id));
     setEditingFileName(file.fileName);
   };
 
   const handleSave = (fileId: number) => {
     setFiles(
       files.map((file) =>
-        file.id === fileId ? { ...file, fileName: editingFileName } : file
+        Number(file.id) === fileId
+          ? { ...file, fileName: editingFileName }
+          : file
       )
     );
     setEditingId(null);
@@ -71,87 +91,101 @@ export function FileListSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {files.map((file, index) => (
-              <TableRow
-                key={file.id}
-                className="hover:bg-muted/50 transition-colors"
-              >
-                <TableCell className="text-center text-muted-foreground font-medium">
-                  {index + 1}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {editingId === file.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={editingFileName}
-                        onChange={(e) => setEditingFileName(e.target.value)}
-                        className="h-8"
-                        autoFocus
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSave(file.id)}
-                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCancel}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    file.fileName
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {file.uploadDate}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {file.tokenCount}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {file.fileSize}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePreview(file)}
-                      title="プレビュー"
-                      className="h-8 w-8 p-0"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(file)}
-                      title="編集"
-                      className="h-8 w-8 p-0"
-                      disabled={editingId !== null}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(file)}
-                      title="削除"
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  読み込み中...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : files.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  データがありません
+                </TableCell>
+              </TableRow>
+            ) : (
+              files.map((file, index) => (
+                <TableRow
+                  key={file.id}
+                  className="hover:bg-muted/50 transition-colors"
+                >
+                  <TableCell className="text-center text-muted-foreground font-medium">
+                    {index + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {editingId === Number(file.id) ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editingFileName}
+                          onChange={(e) => setEditingFileName(e.target.value)}
+                          className="h-8"
+                          autoFocus
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSave(Number(file.id))}
+                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancel}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      file.fileName
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {file.uploadDate}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {file.tokenCount}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {file.fileSize}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreview(file)}
+                        title="プレビュー"
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(file)}
+                        title="編集"
+                        className="h-8 w-8 p-0"
+                        disabled={editingId !== null}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(file)}
+                        title="削除"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
