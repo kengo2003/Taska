@@ -1,4 +1,3 @@
-import React from "react";
 import FileUploadCard from "./FileUploadCard";
 
 const NewFileUploadSection = () => {
