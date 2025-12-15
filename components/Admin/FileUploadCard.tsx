@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useActionState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -17,22 +16,39 @@ const initialState: UploadState = {
   message: "",
 };
 
-const FileUploadCard = () => {
-  const [state, formAction] = useActionState(uploadDocuments, initialState);
-  const router = useRouter();
-  const [selectedTableId, setSelectedTableId] = useState<string>("");
+type Props = {
+  onUploadSuccess?: () => void;
+  initialKbId: string;
+  onKbIdChange: (id: string) => void;
+};
+
+const FileUploadCard = ({
+  onUploadSuccess,
+  initialKbId,
+  onKbIdChange,
+}: Props) => {
+  const [state, formAction, isPending] = useActionState(
+    uploadDocuments,
+    initialState
+  );
+  const [selectedTableId, setSelectedTableId] = useState<string>(initialKbId);
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const data = await getKnowledgeBases();
         setCategories(data);
         if (data.length > 0) {
-          setSelectedTableId(data[0].id);
-        }
-        if (state.success) {
-          router.refresh();
+          if (initialKbId) {
+            setSelectedTableId(initialKbId);
+          } // 初回ロード時
+          else {
+            const firstId = data[0].id;
+            setSelectedTableId(firstId);
+            onKbIdChange(firstId);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -42,13 +58,25 @@ const FileUploadCard = () => {
     };
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (state.success && onUploadSuccess) {
+      onUploadSuccess();
+    }
+  }, [state.success, onUploadSuccess]);
+
+  const handleSelectChange = (value: string) => {
+    setSelectedTableId(value);
+    onKbIdChange(value);
+  };
+
   if (loading) return <div>Loading categories...</div>;
   if (categories.length === 0) return <div>ナレッジベースが見つかりません</div>;
   return (
     <div className="border border-dashed rounded-xl border-[#3DA8FF] p-5 w-lg text-center bg-[#EFF8FF]">
       <p>削除したいナレッジを選択</p>
       <div className="mb-6">
-        <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+        <Select value={selectedTableId} onValueChange={handleSelectChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -61,17 +89,6 @@ const FileUploadCard = () => {
           </SelectContent>
         </Select>
       </div>
-      {/* {selectedTableId && (
-          <FileListSection kbId={selectedTableId} key={selectedTableId} />
-        )} */}
-      {/* <Image
-        src={"/Icon.svg"}
-        alt="file-upload"
-        height={100}
-        width={100}
-        className="mx-auto"
-      /> */}
-      {/* <p className="py-5 text-base font-bold">ファイルをアップロード</p> */}
       <form
         action={formAction}
         className="flex flex-col gap-4 border p-6 rounded-lg shadow-sm w-full max-w-md"
@@ -96,6 +113,7 @@ const FileUploadCard = () => {
 
         <button
           type="submit"
+          disabled={!selectedTableId || isPending}
           className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition disabled:opacity-50"
         >
           アップロード開始
