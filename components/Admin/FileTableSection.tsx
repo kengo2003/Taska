@@ -12,7 +12,7 @@ import {
 import { getKnowledgeBases } from "@/app/(main)/admin/actions";
 import { KnowledgeBaseOption } from "@/types/type";
 
-const FileTableSection = () => {
+const FileTableSection = ({ refreshTrigger }: { refreshTrigger: number }) => {
   const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,10 @@ const FileTableSection = () => {
         </Select>
       </div>
       {selectedTableId && (
-        <FileListSection kbId={selectedTableId} key={selectedTableId} />
+        <FileListSection
+          kbId={selectedTableId}
+          key={`${selectedTableId}-${refreshTrigger}`}
+        />
       )}
     </div>
   );

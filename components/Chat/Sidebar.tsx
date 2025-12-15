@@ -14,7 +14,7 @@ type Props = {
 const Sidebar = ({ sessions, currentSessionId, onNewChat, onSelectSession, onDeleteSession }: Props) => {
   return (
     // Updated background to match the login screen's light blue theme
-    <aside className="w-64 flex-shrink-0 bg-gradient-to-b from-white via-[#EBF5FF] to-[#A6D6F3] border-r border-blue-100 flex flex-col hidden md:flex">
+    <aside className="w-64 flex-shrink-0 bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3] border-r border-blue-100 flex flex-col hidden md:flex">
       <div className="p-4">
         <button className="p-2 hover:bg-blue-100 rounded-md transition-colors text-blue-600">
           <Menu className="w-6 h-6" />
