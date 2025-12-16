@@ -1,11 +1,24 @@
-import React from "react";
 import FileUploadCard from "./FileUploadCard";
 
-const NewFileUploadSection = () => {
+type Props = {
+  onUploadSuccess: () => void;
+  currentKbId: string;
+  onKbIdChange: (id: string) => void;
+};
+
+const NewFileUploadSection = ({
+  onUploadSuccess,
+  currentKbId,
+  onKbIdChange,
+}: Props) => {
   return (
     <div>
       <p className="py-5 font-bold text-lg">新規ファイルをアップロード</p>
-      <FileUploadCard />
+      <FileUploadCard
+        onUploadSuccess={onUploadSuccess}
+        initialKbId={currentKbId}
+        onKbIdChange={onKbIdChange}
+      />
     </div>
   );
 };

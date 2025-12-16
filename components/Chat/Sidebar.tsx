@@ -14,7 +14,7 @@ type Props = {
 const Sidebar = ({ sessions, currentSessionId, onNewChat, onSelectSession, onDeleteSession }: Props) => {
   return (
     // ★デザイン変更: 共通サイドバーと同じグラデーション(from-[#F5F5F5] to-[#94BBD9])を適用
-    <aside className="w-64 flex-shrink-0 bg-gradient-to-b from-[#F5F5F5] to-[#94BBD9] border-r border-gray-200 flex flex-col hidden md:flex">
+    <aside className="w-64 flex-shrink-0 bg-linear-to-b from-[#F5F5F5] to-[#94BBD9] border-r border-gray-200 flex flex-col hidden md:flex">
       
       {/* ヘッダー部分 */}
       <div className="p-4">

@@ -29,3 +29,9 @@ export interface KnowledgeBaseOption {
   id: string;
   label: string;
 }
+
+export type UploadState = {
+  success: boolean;
+  message: string;
+  data?: any;
+};
