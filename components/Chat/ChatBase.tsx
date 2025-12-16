@@ -2,17 +2,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Send, UserSearch, History, Target, PenTool, BookOpen, Sparkles, FileSearch, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
-// ★Markdown表示用ライブラリ
+import Link from 'next/link'; // ★追加: リンク用
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks'; // ★追加: 改行を有効にするプラグイン
+import remarkBreaks from 'remark-breaks'; 
 
-// ★共通ヘッダー
 import Header from "@/components/common/Header";
-// ★チャット用サイドバー
 import ChatSidebar from "@/components/Chat/Sidebar";
 
 // --- 型定義 ---
+export type ChatMode = 'analysis' | 'create' | 'critique';
+
 type Message = {
   role: 'user' | 'assistant';
   content: string;
@@ -31,9 +31,7 @@ type ChatSession = {
   difyConversationId?: string;
 };
 
-type ChatMode = 'analysis' | 'create' | 'critique';
-
-// --- テンプレート定義 ---
+// --- テンプレート定義 (変更なし) ---
 const ANALYSIS_TEMPLATES = [
   {
     icon: <History className="w-4 h-4 text-purple-500" />,
@@ -110,10 +108,15 @@ const fileToBase64 = (file: File): Promise<string> => {
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) => `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
 
-export default function TaskaPage() {
+// ★ Propsの定義
+interface ChatBaseProps {
+  mode: ChatMode;
+}
+
+export default function ChatBase({ mode }: ChatBaseProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentMode, setCurrentMode] = useState<ChatMode>('analysis');
+  // currentModeステートは削除し、propsのmodeを使用します
   const [difyConversationId, setDifyConversationId] = useState<string>('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -148,7 +151,7 @@ export default function TaskaPage() {
   }, [input]);
 
   const getCurrentTemplates = () => {
-    switch (currentMode) {
+    switch (mode) {
       case 'create': return CREATE_TEMPLATES;
       case 'critique': return CRITIQUE_TEMPLATES;
       case 'analysis': return ANALYSIS_TEMPLATES;
@@ -157,7 +160,7 @@ export default function TaskaPage() {
   };
 
   const getCurrentTitle = () => {
-    switch (currentMode) {
+    switch (mode) {
       case 'create': return '履歴書作成';
       case 'critique': return '履歴書添削';
       case 'analysis': return '自己分析';
@@ -377,38 +380,38 @@ export default function TaskaPage() {
                         {getCurrentTitle()}
                     </h1>
                     
-                    {/* モード切替タブ */}
+                    {/* ★修正: モード切替タブをLinkに変更 */}
                     <div className="flex flex-wrap gap-2">
-                      <button 
-                        onClick={() => setCurrentMode('analysis')}
+                      <Link 
+                        href="/chat/analysis"
                         className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                          currentMode === 'analysis' 
+                          mode === 'analysis' 
                             ? 'bg-blue-600 text-white shadow-md' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         自己分析
-                      </button>
-                      <button 
-                        onClick={() => setCurrentMode('create')}
+                      </Link>
+                      <Link 
+                        href="/chat/create"
                         className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                          currentMode === 'create' 
+                          mode === 'create' 
                             ? 'bg-blue-600 text-white shadow-md' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         履歴書作成
-                      </button>
-                      <button 
-                        onClick={() => setCurrentMode('critique')}
+                      </Link>
+                      <Link 
+                        href="/chat/critique"
                         className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                          currentMode === 'critique' 
+                          mode === 'critique' 
                             ? 'bg-blue-600 text-white shadow-md' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         履歴書添削
-                      </button>
+                      </Link>
                     </div>
                 </div>
 
@@ -445,14 +448,11 @@ export default function TaskaPage() {
                                   </div>
                                 )}
                                 
-                                {/* ★Markdownレンダリングの適用（remarkBreaks追加） */}
                                 <div className="prose prose-sm max-w-none text-gray-800 break-words [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
                                   <ReactMarkdown 
                                     remarkPlugins={[remarkGfm, remarkBreaks]}
                                     components={{
-                                      // リンクを新しいタブで開く
                                       a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />,
-                                      // pタグの余白調整
                                       p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />
                                     }}
                                   >
