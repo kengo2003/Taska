@@ -24,7 +24,7 @@ export default function LoginBase() {
       // --- ログイン判定ロジック ---
       if (email === 'test@test.com' && password === 'test') {
         // ログイン成功 -> ホームへ遷移
-        router.push('/home'); 
+        router.push('/'); 
       } else {
         throw new Error('IDまたはパスワードが間違っています');
       }
