@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Send, UserSearch, History, Target, PenTool, BookOpen, Sparkles, FileSearch, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import Link from 'next/link'; // ★追加: リンク用
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks'; 
