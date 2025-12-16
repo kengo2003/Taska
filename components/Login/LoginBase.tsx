@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { LoginInput } from '@/components/Login/LoginInput';
 import { LoginButton } from '@/components/Login/LoginButton';
 
-export default function LoginPage() {
-  const router = useRouter(); // ルーターの初期化
+export default function LoginBase() {
+  const router = useRouter(); 
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,26 +18,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      console.log('Logging in with:', email, password);
-      
-      // デモ用の待機時間（本番ではAPIのawaitになります）
+      // デモ用の待機時間
       await new Promise(resolve => setTimeout(resolve, 800));
 
       // --- ログイン判定ロジック ---
-      // 指定のテストアカウントのみ許可
       if (email === 'test@test.com' && password === 'test') {
-        // --- ログイン成功時の処理 ---
-        // ここで app/page.tsx (ルートパス '/') に遷移します
-        router.push('/');
+        // ログイン成功 -> ホームへ遷移
+        router.push('/home'); 
       } else {
-        // --- ログイン失敗時の処理 ---
-        // エラーを投げて catch ブロックへ移動させます
         throw new Error('IDまたはパスワードが間違っています');
       }
       
     } catch (error) {
       console.error('Login failed:', error);
-      setIsLoading(false); // エラー時のみローディングを戻す
+      setIsLoading(false);
       alert('ログインに失敗しました\nIDまたはパスワードを確認してください');
     }
   };
