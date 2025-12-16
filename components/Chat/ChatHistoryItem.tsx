@@ -1,5 +1,5 @@
-import { MessageSquare, Trash2 } from 'lucide-react';
-import { ChatSession } from '@/types';
+import { MessageSquare, Trash2 } from "lucide-react";
+import { ChatSession } from "@/types/type";
 
 type Props = {
   session: ChatSession;
@@ -14,15 +14,21 @@ const ChatHistoryItem = ({ session, isActive, onSelect, onDelete }: Props) => {
       <button
         onClick={() => onSelect(session)}
         className={`w-full text-left p-3 rounded-lg text-sm flex items-start gap-3 transition-all ${
-          isActive 
-            ? 'bg-white text-blue-600 font-bold shadow-sm border border-blue-100' 
-            : 'hover:bg-white/60 text-gray-600 hover:text-blue-500'
+          isActive
+            ? "bg-white text-blue-600 font-bold shadow-sm border border-blue-100"
+            : "hover:bg-white/60 text-gray-600 hover:text-blue-500"
         }`}
       >
-        <MessageSquare className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
+        <MessageSquare
+          className={`w-4 h-4 mt-0.5 shrink-0 ${
+            isActive ? "text-blue-500" : "text-gray-400"
+          }`}
+        />
         <div className="flex-1 min-w-0">
           <div className="truncate">{session.title}</div>
-          <div className="text-[10px] opacity-60 font-normal mt-0.5">{session.date}</div>
+          <div className="text-[10px] opacity-60 font-normal mt-0.5">
+            {session.date}
+          </div>
         </div>
       </button>
 
