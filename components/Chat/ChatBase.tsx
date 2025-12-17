@@ -16,7 +16,8 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
-import ChatSidebar from "@/components/Chat/Sidebar";
+import Sidebar from "@/components/common/Sidebar";
+import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
 import { Message, ChatSession } from "@/types/type";
 import {
   ANALYSIS_TEMPLATES,
@@ -330,13 +331,15 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
   return (
     <div className="flex h-screen w-full">
-      <ChatSidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onNewChat={startNewChat}
-        onSelectSession={loadSession}
-        onDeleteSession={deleteSession}
-      />
+      <Sidebar>
+        <ChatSidebarContent
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onNewChat={startNewChat}
+          onSelectSession={loadSession}
+          onDeleteSession={deleteSession}
+        />
+      </Sidebar>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
@@ -344,13 +347,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         <main className="flex-1 flex overflow-hidden relative bg-white">
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
-              {/* ヘッダーエリア */}
               <div className="mt-4 mb-4 shrink-0">
                 <h1 className="text-2xl font-bold text-gray-800 border-b-2 border-gray-300 inline-block pb-1 mb-4">
                   {getCurrentTitle()}
                 </h1>
 
-                {/* ★修正: モード切替タブをLinkに変更 */}
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"

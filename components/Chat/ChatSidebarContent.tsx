@@ -11,7 +11,7 @@ type Props = {
   onDeleteSession: (e: React.MouseEvent, sessionId: string) => void;
 };
 
-const Sidebar = ({
+const ChatSidebarContent = ({
   sessions,
   currentSessionId,
   onNewChat,
@@ -19,7 +19,7 @@ const Sidebar = ({
   onDeleteSession,
 }: Props) => {
   return (
-    <aside className="w-64 shrink-0 bg-linear-to-b from-[#F5F5F5] to-[#94BBD9] border-r border-gray-200 flex flex-col md:flex">
+    <aside className="w-64 shrink-0 border-r border-gray-200 flex flex-col md:flex">
       {/* ヘッダー部分 */}
       <div className="p-4">
         <div className="flex items-center gap-2 text-gray-600 font-bold px-2 mb-2">
@@ -32,7 +32,7 @@ const Sidebar = ({
         <NewChatButton onClick={onNewChat} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-gray-300 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 scrollbar-thin pb-4">
         <div className="text-xs text-gray-500 mb-2 font-bold tracking-wide">
           HISTORY
         </div>
@@ -58,4 +58,4 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar;
+export default ChatSidebarContent;
