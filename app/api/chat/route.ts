@@ -1,6 +1,32 @@
 // app/api/chat/route.ts
 import { NextResponse } from 'next/server';
 
+// Dify API用の型定義
+interface DifyFile {
+  type: 'image' | 'document';
+  transfer_method: 'local_file' | 'remote_url';
+  upload_file_id: string;
+}
+
+interface UploadResponse {
+  id: string;
+  name: string;
+  size: number;
+  extension: string;
+  mime_type: string;
+  created_by: string;
+  created_at: number;
+}
+
+interface ChatPayload {
+  inputs: Record<string, unknown>;
+  query: string;
+  response_mode: 'blocking' | 'streaming';
+  user: string;
+  conversation_id?: string;
+  files?: DifyFile[];
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -17,7 +43,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Config Error: API Key or URL missing' }, { status: 500 });
     }
 
-    let difyFiles = [];
+    // constに変更し型定義
+    const difyFiles: DifyFile[] = [];
 
     // 1. ファイルアップロード処理
     if (files && files.length > 0) {
@@ -39,7 +66,7 @@ export async function POST(request: Request) {
           continue;
         }
 
-        const uploadData = await uploadRes.json();
+        const uploadData = (await uploadRes.json()) as UploadResponse;
         const isImage = file.type.startsWith('image/');
         difyFiles.push({
           type: isImage ? 'image' : 'document',
@@ -49,24 +76,37 @@ export async function POST(request: Request) {
       }
     }
 
-    let inputs: Record<string, any> = {};
+    let inputs: Record<string, unknown> = {};
     try {
-      if (inputsString) inputs = JSON.parse(inputsString);
-    } catch (e) {}
+      if (inputsString) {
+        inputs = JSON.parse(inputsString) as Record<string, unknown>;
+      }
+    } catch (e) {
+      console.warn('Failed to parse inputs JSON:', e);
+    }
 
+    // 既存ロジックの維持: inputs['doc'] にもファイル情報を入れている場合
     if (difyFiles.length > 0) {
       inputs['doc'] = difyFiles;
     }
 
-    // 2. チャット送信
-    const chatPayload = {
+    // 2. チャット送信ペイロードの構築
+    const chatPayload: ChatPayload = {
       inputs: inputs,
       query: query,
       response_mode: 'blocking',
-      conversation_id: conversationId || '',
       user: user || 'user-123',
-      files: difyFiles
     };
+
+    // conversation_id が空文字やnullの場合はプロパティを含めない
+    if (conversationId && conversationId.trim() !== '' && conversationId !== 'null') {
+      chatPayload.conversation_id = conversationId;
+    }
+
+    // files がある場合のみプロパティを含める
+    if (difyFiles.length > 0) {
+      chatPayload.files = difyFiles;
+    }
 
     console.log('Sending to Dify:', JSON.stringify(chatPayload, null, 2));
 
@@ -80,13 +120,12 @@ export async function POST(request: Request) {
     });
 
     if (!chatRes.ok) {
-      // ★修正: エラーをJSONと決めつけず、テキストとして取得してログに出す
       const errorText = await chatRes.text();
       console.error(`Dify Chat Error (${chatRes.status}):`, errorText);
       
       let errorJson;
       try {
-        errorJson = JSON.parse(errorText);
+        errorJson = JSON.parse(errorText) as unknown;
       } catch {
         errorJson = { message: errorText, code: chatRes.status };
       }
@@ -94,13 +133,14 @@ export async function POST(request: Request) {
       return NextResponse.json(errorJson, { status: chatRes.status });
     }
 
-    const data = await chatRes.json();
+    const data = (await chatRes.json()) as unknown;
     return NextResponse.json(data);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Server Error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error.message },
+      { error: 'Internal Server Error', details: errorMessage },
       { status: 500 }
     );
   }
