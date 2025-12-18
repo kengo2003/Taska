@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const conversationId = formData.get('conversation_id') as string;
     const files = formData.getAll('file') as File[];
     
-    // ★重要: Q&A用のAPIキーを使用する
+    // 環境変数からQ&A用のAPIキーを取得（必ず.envに追加してください）
     const apiKey = process.env.DIFY_QA_API_KEY; 
     const apiUrl = process.env.DIFY_API_URL?.replace(/\/$/, '');
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Config Error: API Key or URL missing' }, { status: 500 });
     }
 
-    let difyFiles = [];
+    const difyFiles: Record<string, any>[] = [];
 
     // 1. ファイルアップロード処理 (Difyへの転送)
     if (files && files.length > 0) {
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
 
         const uploadData = await uploadRes.json();
         const isImage = file.type.startsWith('image/');
+        
         difyFiles.push({
           type: isImage ? 'image' : 'document',
           transfer_method: 'local_file',
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
 
     // 2. チャット送信
     const chatPayload = {
-      inputs: {}, // Q&Aボットに必要な変数があればここで設定
+      inputs: {}, 
       query: query,
       response_mode: 'blocking',
       conversation_id: conversationId || '',
