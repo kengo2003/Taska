@@ -236,7 +236,7 @@ export default function QABase() {
 
       filesToSend.forEach((file) => formData.append("file", file));
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/qa", {
         method: "POST",
         body: formData,
       });
