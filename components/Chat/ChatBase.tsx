@@ -10,26 +10,15 @@ import remarkBreaks from 'remark-breaks';
 import Header from "@/components/common/Header";
 import ChatSidebar from "@/components/Chat/Sidebar";
 
+// ★修正: 共通の型定義をインポート
+import { ChatSession, Message } from "@/types/type";
+
 // --- 型定義 ---
+// ChatModeはこのコンポーネント固有のものとして残してもOKですが、
+// 必要であればtypes/type.tsに移動しても構いません。今回はここに残します。
 export type ChatMode = 'analysis' | 'create' | 'critique';
 
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  attachments?: {
-    name: string;
-    url: string; 
-    type: 'image' | 'file';
-  }[];
-};
-
-type ChatSession = {
-  id: string;
-  title: string;
-  date: string;
-  messages: Message[];
-  difyConversationId?: string;
-};
+// ★削除: Message, ChatSession のローカル定義を削除（重複するため）
 
 // --- テンプレート定義 (変更なし) ---
 const ANALYSIS_TEMPLATES = [
@@ -116,7 +105,6 @@ interface ChatBaseProps {
 export default function ChatBase({ mode }: ChatBaseProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  // currentModeステートは削除し、propsのmodeを使用します
   const [difyConversationId, setDifyConversationId] = useState<string>('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -380,7 +368,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         {getCurrentTitle()}
                     </h1>
                     
-                    {/* ★修正: モード切替タブをLinkに変更 */}
+                    {/* タブ切り替えボタン */}
                     <div className="flex flex-wrap gap-2">
                       <Link 
                         href="/chat/analysis"

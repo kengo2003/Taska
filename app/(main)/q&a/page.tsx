@@ -1,5 +1,5 @@
 import QABase from "@/components/QA/QABase";
 
-export default function QAPage() {
+export default function FAQPage() {
   return <QABase />;
 }
