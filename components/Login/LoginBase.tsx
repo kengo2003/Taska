@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { LoginInput } from '@/components/Login/LoginInput';
-import { LoginButton } from '@/components/Login/LoginButton';
+import React, { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { LoginInput } from "@/components/Login/LoginInput";
+import { LoginButton } from "@/components/Login/LoginButton";
 
 export default function LoginBase() {
-  const router = useRouter(); 
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -19,32 +19,30 @@ export default function LoginBase() {
 
     try {
       // デモ用の待機時間
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       // --- ログイン判定ロジック ---
-      if (email === 'test@test.com' && password === 'test') {
+      if (email === "test@test.com" && password === "test") {
         // ログイン成功 -> ホームへ遷移
-        router.push('/'); 
+        router.push("/");
       } else {
-        throw new Error('IDまたはパスワードが間違っています');
+        throw new Error("IDまたはパスワードが間違っています");
       }
-      
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error("Login failed:", error);
       setIsLoading(false);
-      alert('ログインに失敗しました\nIDまたはパスワードを確認してください');
+      alert("ログインに失敗しました\nIDまたはパスワードを確認してください");
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-white via-[#EBF5FF] to-[#A6D6F3]">
-      
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3]">
       {/* ロゴエリア */}
       <div className="mb-12 relative w-64 h-20">
-        <Image 
-          src="/TaskaLogo.png" 
-          alt="Taska Logo" 
-          fill 
+        <Image
+          src="/TaskaLogo.png"
+          alt="Taska Logo"
+          fill
           className="object-contain"
           priority
         />
@@ -52,7 +50,6 @@ export default function LoginBase() {
 
       {/* 入力フォームエリア */}
       <form onSubmit={handleLogin} className="w-full max-w-sm px-8">
-        
         <LoginInput
           id="email"
           type="email"
@@ -74,7 +71,6 @@ export default function LoginBase() {
         />
 
         <LoginButton isLoading={isLoading} />
-
       </form>
     </div>
   );
