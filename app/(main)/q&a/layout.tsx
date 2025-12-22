@@ -5,6 +5,5 @@ export default function FAQLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // page.tsx側でSidebarとHeaderを管理するため、ここでは何もラップしない
   return <>{children}</>;
 }

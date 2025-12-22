@@ -24,6 +24,7 @@ import {
   CREATE_TEMPLATES,
   CRITIQUE_TEMPLATES,
 } from "@/Templates/data";
+import Title from "../common/Title";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
@@ -53,16 +54,21 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [difyConversationId, setDifyConversationId] = useState<string>("");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(true);
 
   // モードに応じた初期メッセージ
-  const getInitialMessage = () => {
-    switch (mode) {
-      case 'analysis': return 'こんにちは！自己分析を始めましょう。あなたの過去の経験や価値観について聞かせてください。';
-      case 'create': return 'こんにちは！履歴書の作成をお手伝いします。アピールしたいポイントやエピソードはありますか？';
-      case 'critique': return 'こんにちは！履歴書の添削を行います。作成した文章やファイルをアップロードしてください。';
-      default: return 'こんにちは！Taskaへようこそ。何かお手伝いしましょうか？';
-    }
-  };
+  // const getInitialMessage = () => {
+  //   switch (mode) {
+  //     case "analysis":
+  //       return "こんにちは！自己分析を始めましょう。あなたの過去の経験や価値観について聞かせてください。";
+  //     case "create":
+  //       return "こんにちは！履歴書の作成をお手伝いします。アピールしたいポイントやエピソードはありますか？";
+  //     case "critique":
+  //       return "こんにちは！履歴書の添削を行います。作成した文章やファイルをアップロードしてください。";
+  //     default:
+  //       return "こんにちは！Taskaへようこそ。何かお手伝いしましょうか？";
+  //   }
+  // };
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -147,6 +153,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     if (currentSessionId === sessionId) {
       startNewChat();
     }
+  };
+
+  const handleTemplateClick = (prompt: string) => {
+    setInput(prompt);
+    textareaRef.current?.focus();
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,22 +296,22 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       }
 
       const data = await res.json();
-      
-      // ★ Difyからのファイル情報を解析して画像かどうかを判定
-      let assistantAttachments: Message['attachments'] = [];
+
+      let assistantAttachments: Message["attachments"] = [];
       if (data.files && Array.isArray(data.files)) {
-        assistantAttachments = data.files.map((file: any) => {
-          // タイプ判定の強化: typeフィールド または 拡張子で判定
-          const isImage = 
-            file.type === 'image' || 
-            /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name || '');
-            
-          return {
-            name: file.name || 'Generated File',
-            url: file.url,
-            type: isImage ? 'image' : 'file'
-          };
-        });
+        assistantAttachments = data.files.map(
+          (file: { type?: string; name?: string; url: string }) => {
+            const isImage =
+              file.type === "image" ||
+              /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name || "");
+
+            return {
+              name: file.name || "Generated File",
+              url: file.url,
+              type: isImage ? "image" : "file",
+            };
+          }
+        );
       }
 
       if (data.conversation_id) {
@@ -315,12 +326,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       }
 
       const assistantMessage: Message = {
-        
         role: "assistant",
-        
+
         content: data.answer,
-        attachments: assistantAttachments
-     ,
+        attachments: assistantAttachments,
       };
 
       const finalMessages = [...updatedMessages, assistantMessage];
@@ -373,9 +382,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
               <div className="mt-4 mb-4 shrink-0">
-                <h1 className="text-2xl font-bold text-gray-800 border-b-2 border-gray-300 inline-block pb-1 mb-4">
-                  {getCurrentTitle()}
-                </h1>
+                <Title text={getCurrentTitle()} />
 
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -472,7 +479,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkBreaks]}
                           components={{
-                            a: ({ node, ...props }) => (
+                            a: ({ ...props }) => (
                               <a
                                 {...props}
                                 target="_blank"
@@ -480,7 +487,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                 className="text-blue-600 hover:underline"
                               />
                             ),
-                            p: ({ node, ...props }) => (
+                            p: ({ ...props }) => (
                               <p {...props} className="mb-2 last:mb-0" />
                             ),
                           }}

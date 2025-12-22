@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 type Props = {
   id: string;
@@ -7,14 +7,22 @@ type Props = {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
-  className?: string; // マージン調整用
+  className?: string;
 };
 
-export const LoginInput = ({ id, type, label, value, onChange, placeholder, className = "" }: Props) => {
+export const LoginInput = ({
+  id,
+  type,
+  label,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: Props) => {
   return (
     <div className={className}>
-      <label 
-        htmlFor={id} 
+      <label
+        htmlFor={id}
         className="block text-xs font-bold text-gray-500 mb-2 tracking-wide"
       >
         {label}

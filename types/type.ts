@@ -33,36 +33,16 @@ export interface KnowledgeBaseOption {
 export type UploadState = {
   success: boolean;
   message: string;
-  data?: any;
+  data?: JSON;
 };
 
-// メッセージの型定義
 export type Message = {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   attachments?: {
     name: string;
     url: string;
-    type: 'image' | 'file';
-  }[];
-};
-
-// チャットセッションの型定義
-export type ChatSession = {
-  id: string;
-  title: string;
-  date: string;
-  messages: Message[];
-  difyConversationId?: string;
-};
-
-export type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  attachments?: {
-    name: string;
-    url: string;
-    type: 'image' | 'file';
+    type: "image" | "file";
   }[];
 };
 
@@ -71,4 +51,5 @@ export type ChatSession = {
   title: string;
   date: string;
   messages: Message[];
+  difyConversationId: string;
 };

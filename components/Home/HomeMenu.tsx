@@ -1,4 +1,3 @@
-import React from "react";
 import MenuButton from "./MenuButton";
 
 const HomeMenu = () => {
