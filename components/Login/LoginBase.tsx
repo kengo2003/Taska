@@ -18,12 +18,9 @@ export default function LoginBase() {
     setIsLoading(true);
 
     try {
-      // デモ用の待機時間
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // --- ログイン判定ロジック ---
       if (email === "test@test.com" && password === "test") {
-        // ログイン成功 -> ホームへ遷移
         router.push("/");
       } else {
         throw new Error("IDまたはパスワードが間違っています");
@@ -37,7 +34,6 @@ export default function LoginBase() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3]">
-      {/* ロゴエリア */}
       <div className="mb-12 relative w-64 h-20">
         <Image
           src="/TaskaLogo.png"
@@ -48,7 +44,6 @@ export default function LoginBase() {
         />
       </div>
 
-      {/* 入力フォームエリア */}
       <form onSubmit={handleLogin} className="w-full max-w-sm px-8">
         <LoginInput
           id="email"
