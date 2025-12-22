@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 import { NextResponse } from 'next/server';
 
 // Dify API用の型定義
@@ -34,16 +33,16 @@ export async function POST(request: Request) {
     const user = formData.get('user') as string;
     const conversationId = formData.get('conversation_id') as string;
     const files = formData.getAll('file') as File[];
-    const inputsString = formData.get('inputs') as string;
-
-    const apiKey = process.env.DIFY_API_KEY;
+    
+    const apiKey = process.env.DIFY_QA_API_KEY; 
     const apiUrl = process.env.DIFY_API_URL?.replace(/\/$/, '');
 
     if (!apiKey || !apiUrl) {
-      return NextResponse.json({ error: 'Config Error: API Key or URL missing' }, { status: 500 });
+      console.error("Config Error: DIFY_QA_API_KEY or DIFY_API_URL is missing.");
+      return NextResponse.json({ error: 'Config Error' }, { status: 500 });
     }
 
-    // constに変更し型定義
+    // 型付きの配列として初期化
     const difyFiles: DifyFile[] = [];
 
     // 1. ファイルアップロード処理
@@ -52,7 +51,7 @@ export async function POST(request: Request) {
         if (file.size === 0) continue;
         const uploadFormData = new FormData();
         uploadFormData.append('file', file, file.name);
-        uploadFormData.append('user', user || 'user-123');
+        uploadFormData.append('user', user || 'qa-user');
 
         const uploadRes = await fetch(`${apiUrl}/files/upload`, {
           method: 'POST',
@@ -61,13 +60,14 @@ export async function POST(request: Request) {
         });
 
         if (!uploadRes.ok) {
-          const errText = await uploadRes.text();
-          console.error(`File Upload Failed (${uploadRes.status}):`, errText);
+          console.error(`File Upload Failed: ${uploadRes.status}`);
           continue;
         }
 
+        // レスポンスの型を指定
         const uploadData = (await uploadRes.json()) as UploadResponse;
         const isImage = file.type.startsWith('image/');
+        
         difyFiles.push({
           type: isImage ? 'image' : 'document',
           transfer_method: 'local_file',
@@ -76,39 +76,23 @@ export async function POST(request: Request) {
       }
     }
 
-    let inputs: Record<string, unknown> = {};
-    try {
-      if (inputsString) {
-        inputs = JSON.parse(inputsString) as Record<string, unknown>;
-      }
-    } catch (e) {
-      console.warn('Failed to parse inputs JSON:', e);
-    }
-
-    // 既存ロジックの維持: inputs['doc'] にもファイル情報を入れている場合
-    if (difyFiles.length > 0) {
-      inputs['doc'] = difyFiles;
-    }
-
-    // 2. チャット送信ペイロードの構築
+    // 2. ペイロードの構築
     const chatPayload: ChatPayload = {
-      inputs: inputs,
-      query: query,
+      inputs: {}, 
+      query: query || "",
       response_mode: 'blocking',
-      user: user || 'user-123',
+      user: user || 'qa-user',
     };
 
-    // conversation_id が空文字やnullの場合はプロパティを含めない
     if (conversationId && conversationId.trim() !== '' && conversationId !== 'null') {
       chatPayload.conversation_id = conversationId;
     }
 
-    // files がある場合のみプロパティを含める
     if (difyFiles.length > 0) {
       chatPayload.files = difyFiles;
     }
 
-    console.log('Sending to Dify:', JSON.stringify(chatPayload, null, 2));
+    console.log('Sending to Dify QA:', JSON.stringify(chatPayload, null, 2));
 
     const chatRes = await fetch(`${apiUrl}/chat-messages`, {
       method: 'POST',
@@ -125,20 +109,25 @@ export async function POST(request: Request) {
       
       let errorJson;
       try {
+        // エラーレスポンスの型は不明なため unknown として扱う
         errorJson = JSON.parse(errorText) as unknown;
       } catch {
-        errorJson = { message: errorText, code: chatRes.status };
+        errorJson = { message: errorText, code: 'unknown_error' };
       }
-      
       return NextResponse.json(errorJson, { status: chatRes.status });
     }
 
+    // 成功レスポンスの型も厳密にするなら定義が必要だが、一旦 unknown か any で受けて返す
     const data = (await chatRes.json()) as unknown;
     return NextResponse.json(data);
 
   } catch (error: unknown) {
+    // catch句の error は unknown 型として扱う
     console.error('Server Error:', error);
+    
+    // エラーメッセージの安全な取得
     const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return NextResponse.json(
       { error: 'Internal Server Error', details: errorMessage },
       { status: 500 }

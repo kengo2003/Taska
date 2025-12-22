@@ -3,29 +3,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Upload,
-  X,
   Send,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
+  X,
 } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
-import Sidebar from "@/components/common/Sidebar";
-import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
-import { Message, ChatSession } from "@/types/type";
-import {
-  ANALYSIS_TEMPLATES,
-  CREATE_TEMPLATES,
-  CRITIQUE_TEMPLATES,
-} from "@/Templates/data";
+import ChatSidebar from "@/components/Chat/Sidebar";
 
-export type ChatMode = "analysis" | "create" | "critique";
+// ★共通の型定義をインポート
+import { ChatSession, Message } from "@/types/type";
 
 // --- ヘルパー関数 ---
 const fileToBase64 = (file: File): Promise<string> => {
@@ -39,44 +28,30 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) =>
-  `${date.getFullYear()}/${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
+  `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
 
-interface ChatBaseProps {
-  mode: ChatMode;
-}
-
-export default function ChatBase({ mode }: ChatBaseProps) {
+export default function QABase() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [difyConversationId, setDifyConversationId] = useState<string>("");
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-
-  // モードに応じた初期メッセージ
-  const getInitialMessage = () => {
-    switch (mode) {
-      case 'analysis': return 'こんにちは！自己分析を始めましょう。あなたの過去の経験や価値観について聞かせてください。';
-      case 'create': return 'こんにちは！履歴書の作成をお手伝いします。アピールしたいポイントやエピソードはありますか？';
-      case 'critique': return 'こんにちは！履歴書の添削を行います。作成した文章やファイルをアップロードしてください。';
-      default: return 'こんにちは！Taskaへようこそ。何かお手伝いしましょうか？';
-    }
-  };
-
+  const [difyConversationId, setDifyConversationId] = useState<string>('');
+  
+  // 初期メッセージを設定
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content:
-        "こんにちは！**Taska**へようこそ。\nまずは上のタブから、やりたいことを選んでください。",
-    },
+      content: "こんにちは！**学内Q&Aボット**です。\n学校生活、授業、施設、資格取得などについて、分からないことがあれば何でも聞いてください。"
+    }
   ]);
-
+  
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // サイドバー管理用
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,44 +64,20 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       const maxHeight = 150;
       const newHeight = Math.min(textarea.scrollHeight, maxHeight);
       textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY =
-        textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
     }
   }, [input]);
-
-  const getCurrentTemplates = () => {
-    switch (mode) {
-      case "create":
-        return CREATE_TEMPLATES;
-      case "critique":
-        return CRITIQUE_TEMPLATES;
-      case "analysis":
-        return ANALYSIS_TEMPLATES;
-      default:
-        return ANALYSIS_TEMPLATES;
-    }
-  };
-
-  const getCurrentTitle = () => {
-    switch (mode) {
-      case "create":
-        return "履歴書作成";
-      case "critique":
-        return "履歴書添削";
-      case "analysis":
-        return "自己分析";
-      default:
-        return "チャット";
-    }
-  };
 
   // --- ハンドラ ---
 
   const startNewChat = () => {
     setCurrentSessionId(null);
-    setDifyConversationId("");
+    setDifyConversationId('');
     setMessages([
-      { role: "assistant", content: "新しいチャットを開始しました。" },
+      {
+        role: "assistant",
+        content: "新しいQ&Aチャットを開始しました。何か質問はありますか？"
+      }
     ]);
     setSelectedFiles([]);
     setInput("");
@@ -134,7 +85,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
   const loadSession = (session: ChatSession) => {
     setCurrentSessionId(session.id);
-    setDifyConversationId(session.difyConversationId || "");
+    setDifyConversationId(session.difyConversationId || '');
     setMessages(session.messages);
     setSelectedFiles([]);
     setInput("");
@@ -206,14 +157,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     let attachmentDataList: Message["attachments"] = [];
     if (filesToSend.length > 0) {
       try {
-        const promises = filesToSend.map(
-          async (file) =>
-            ({
-              name: file.name,
-              type: file.type.startsWith("image/") ? "image" : "file",
-              url: await fileToBase64(file),
-            } as const)
-        );
+        const promises = filesToSend.map(async (file) => ({
+          name: file.name,
+          type: file.type.startsWith("image/") ? "image" : "file",
+          url: await fileToBase64(file),
+        } as const));
         attachmentDataList = await Promise.all(promises);
       } catch (e) {
         console.error(e);
@@ -239,7 +187,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     if (!targetSessionId) {
       targetSessionId = generateId();
       setCurrentSessionId(targetSessionId);
-      const title = messageToSend.trim().substring(0, 20) || getCurrentTitle();
+      const title = messageToSend.trim().substring(0, 20) || "Q&Aチャット";
       const newSession: ChatSession = {
         id: targetSessionId,
         title: title,
@@ -249,9 +197,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       };
       newSessions = [newSession, ...sessions];
     } else {
-      const sessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
+      const sessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
       if (sessionIndex !== -1) {
         const updatedSession = {
           ...newSessions[sessionIndex],
@@ -266,48 +212,27 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "local-user");
+      formData.append("user", "local-user-qa");
       if (difyConversationId) {
         formData.append("conversation_id", difyConversationId);
       }
 
       filesToSend.forEach((file) => formData.append("file", file));
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/qa", {
         method: "POST",
         body: formData,
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("API Error:", errorData);
         throw new Error(res.statusText);
       }
 
       const data = await res.json();
-      
-      // ★ Difyからのファイル情報を解析して画像かどうかを判定
-      let assistantAttachments: Message['attachments'] = [];
-      if (data.files && Array.isArray(data.files)) {
-        assistantAttachments = data.files.map((file: any) => {
-          // タイプ判定の強化: typeフィールド または 拡張子で判定
-          const isImage = 
-            file.type === 'image' || 
-            /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name || '');
-            
-          return {
-            name: file.name || 'Generated File',
-            url: file.url,
-            type: isImage ? 'image' : 'file'
-          };
-        });
-      }
 
       if (data.conversation_id) {
         setDifyConversationId(data.conversation_id);
-        const sessionIndex = newSessions.findIndex(
-          (s) => s.id === targetSessionId
-        );
+        const sessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
         if (sessionIndex !== -1) {
           newSessions[sessionIndex].difyConversationId = data.conversation_id;
           setSessions([...newSessions]);
@@ -315,20 +240,14 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       }
 
       const assistantMessage: Message = {
-        
         role: "assistant",
-        
         content: data.answer,
-        attachments: assistantAttachments
-     ,
       };
 
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const finalSessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
+      const finalSessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
       if (finalSessionIndex !== -1) {
         newSessions[finalSessionIndex].messages = finalMessages;
         setSessions([...newSessions]);
@@ -356,15 +275,13 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
   return (
     <div className="flex h-screen w-full">
-      <Sidebar>
-        <ChatSidebarContent
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          onNewChat={startNewChat}
-          onSelectSession={loadSession}
-          onDeleteSession={deleteSession}
-        />
-      </Sidebar>
+      <ChatSidebar
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        onNewChat={startNewChat}
+        onSelectSession={loadSession}
+        onDeleteSession={deleteSession}
+      />
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
@@ -372,47 +289,18 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         <main className="flex-1 flex overflow-hidden relative bg-white">
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
+              
               <div className="mt-4 mb-4 shrink-0">
                 <h1 className="text-2xl font-bold text-gray-800 border-b-2 border-gray-300 inline-block pb-1 mb-4">
-                  {getCurrentTitle()}
+                  学内Q&A
                 </h1>
-
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href="/chat/analysis"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "analysis"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    自己分析
-                  </Link>
-                  <Link
-                    href="/chat/create"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "create"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    履歴書作成
-                  </Link>
-                  <Link
-                    href="/chat/critique"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "critique"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    履歴書添削
-                  </Link>
-                </div>
+                <p className="text-sm text-gray-500">
+                  学校生活や授業について、AIが回答します。
+                </p>
               </div>
 
               {/* メッセージリスト */}
-              <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2">
+              <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
@@ -423,9 +311,9 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                     }`}
                   >
                     {msg.role === "assistant" && (
-                      <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-blue-100 border border-blue-200">
-                        <div className="w-full h-full flex items-center justify-center text-blue-600 text-xs font-bold">
-                          T
+                      <div className="w-8 h-8 relative rounded-full overflow-hidden flex-shrink-0 bg-green-100 border border-green-200">
+                        <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">
+                          Q
                         </div>
                       </div>
                     )}
@@ -449,7 +337,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                             >
                               {att.type === "image" ? (
                                 <div className="rounded-lg overflow-hidden border border-gray-200 w-32 h-32 bg-gray-50">
-                                  <Image
+                                  <img
                                     src={att.url || "/placeholder.png"}
                                     alt="preview"
                                     className="w-full h-full object-cover"
@@ -457,7 +345,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
-                                  <div className="w-5 h-5 text-blue-500 shrink-0" />
+                                  <div className="w-5 h-5 text-blue-500 flex-shrink-0" />
                                   <span className="font-medium text-gray-700 text-xs truncate">
                                     {att.name}
                                   </span>
@@ -468,7 +356,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         </div>
                       )}
 
-                      <div className="prose prose-sm max-w-none text-gray-800 wrap-break-words [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
+                      <div className="prose prose-sm max-w-none text-gray-800 break-words [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkBreaks]}
                           components={{
@@ -495,58 +383,15 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 {isLoading && (
                   <div className="flex justify-start items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
-                    <div className="text-gray-400 text-sm">
-                      Taskaが入力中...
-                    </div>
+                    <div className="text-gray-400 text-sm">回答を生成中...</div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
-                <div className="mb-3">
-                  <div className="flex justify-between items-center mb-2 px-1">
-                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-yellow-500" />
-                      おすすめの質問（{getCurrentTitle()}）
-                    </span>
-                    <button
-                      onClick={() => setShowTemplates(!showTemplates)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showTemplates ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronUp className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-
-                  {showTemplates && (
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 px-1">
-                      {getCurrentTemplates().map((template, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleTemplateClick(template.prompt)}
-                          className="shrink-0 flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[180px] max-w-60"
-                        >
-                          <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors">
-                            {template.icon}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-gray-700 text-xs truncate mb-0.5">
-                              {template.label}
-                            </div>
-                            <div className="text-[10px] text-gray-500 truncate">
-                              {template.description}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
+              {/* 入力エリア */}
+              <div className="relative w-full max-w-4xl mx-auto flex-shrink-0 mb-2">
+                
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -600,10 +445,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Taskaに相談"
+                    placeholder="ここに質問を入力..."
                     disabled={isLoading}
                     rows={1}
-                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed"
+                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-[56px] leading-relaxed"
                   />
 
                   <div className="absolute right-4 bottom-4 flex items-center gap-2">
@@ -626,6 +471,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
         </main>
