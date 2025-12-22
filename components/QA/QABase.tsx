@@ -11,7 +11,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
-import ChatSidebar from "@/components/Chat/Sidebar";
+import ChatSidebar from "@/components/Chat/ChatSidebarContent";
 
 // ★共通の型定義をインポート
 import { ChatSession, Message } from "@/types/type";
