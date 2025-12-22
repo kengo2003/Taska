@@ -5,7 +5,7 @@ import React from "react";
 const Header = () => {
   return (
     <div className="bg-linear-to-r from-[#F5F5F5] to-[#94BBD9]">
-      <Link href={"/home"}>
+      <Link href={"/"}>
         <Image
           src="/TaskaLogo.png"
           alt="Logo"

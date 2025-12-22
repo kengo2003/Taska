@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Send, UserSearch, History, Target, PenTool, BookOpen, Sparkles, FileSearch, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, X, Send } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,79 +10,11 @@ import remarkBreaks from 'remark-breaks';
 import Header from "@/components/common/Header";
 import ChatSidebar from "@/components/Chat/Sidebar";
 
-// ★修正: 共通の型定義をインポート
+// ★共通の型定義をインポート
 import { ChatSession, Message } from "@/types/type";
 
 // --- 型定義 ---
-// ChatModeはこのコンポーネント固有のものとして残してもOKですが、
-// 必要であればtypes/type.tsに移動しても構いません。今回はここに残します。
 export type ChatMode = 'analysis' | 'create' | 'critique';
-
-// ★削除: Message, ChatSession のローカル定義を削除（重複するため）
-
-// --- テンプレート定義 (変更なし) ---
-const ANALYSIS_TEMPLATES = [
-  {
-    icon: <History className="w-4 h-4 text-purple-500" />,
-    label: "過去の振り返り",
-    prompt: "過去の経験から「自分の価値観」を見つけたいです。小学生から現在までの「モチベーショングラフ」を作るつもりで、私の過去について質問してください。",
-    description: "モチベーションの源泉"
-  },
-  {
-    icon: <Target className="w-4 h-4 text-blue-500" />,
-    label: "キャリアの軸",
-    prompt: "「やりたいこと(Will)」「できること(Can)」「やるべきこと(Must)」のフレームワークを使って、私のキャリアの軸を整理したいです。まずはWillから聞いてください。",
-    description: "Will-Can-Must"
-  },
-  {
-    icon: <UserSearch className="w-4 h-4 text-orange-500" />,
-    label: "強みの発掘",
-    prompt: "自分の強みがわかりません。客観的な視点で私の長所を見つけたいので、私の性格や普段の行動についてインタビューしてください。",
-    description: "客観的に強み"
-  }
-];
-
-const CREATE_TEMPLATES = [
-  {
-    icon: <PenTool className="w-4 h-4 text-green-500" />,
-    label: "ゼロから作成",
-    prompt: "履歴書をゼロから作成したいです。私の強みや経験を引き出すために、プロの視点で順に質問をしてください。",
-    description: "対話形式で作成"
-  },
-  {
-    icon: <BookOpen className="w-4 h-4 text-teal-500" />,
-    label: "志望動機案",
-    prompt: "志望動機がうまく書けません。私の「強み」と「志望企業の魅力」を伝えますので、それらを結びつけた志望動機案を作成してください。",
-    description: "アイデア出し"
-  },
-  {
-    icon: <Sparkles className="w-4 h-4 text-yellow-500" />,
-    label: "自己PR作成",
-    prompt: "エピソードはあるのですが、魅力的な自己PRになりません。私のエピソードを箇条書きにするので、履歴書用の文章にまとめてください。",
-    description: "エピソード文章化"
-  }
-];
-
-const CRITIQUE_TEMPLATES = [
-  {
-    icon: <FileSearch className="w-4 h-4 text-red-500" />,
-    label: "全体チェック",
-    prompt: "作成した履歴書をアップロードします。誤字脱字のチェックだけでなく、採用担当者の視点で「もっとアピールできる点」や「懸念点」を指摘してください。",
-    description: "ファイル診断"
-  },
-  {
-    icon: <CheckCircle className="w-4 h-4 text-indigo-500" />,
-    label: "表現改善",
-    prompt: "この文章を、よりビジネスライクで、かつ熱意が伝わる表現に言い換えてください。\n\n【元の文章】\n",
-    description: "言葉選び"
-  },
-  {
-    icon: <Target className="w-4 h-4 text-pink-500" />,
-    label: "一貫性確認",
-    prompt: "「志望動機」と「自己PR」の内容に矛盾がないか、一貫性があるかを確認してください。",
-    description: "論理チェック"
-  }
-];
 
 // --- ヘルパー関数 ---
 const fileToBase64 = (file: File): Promise<string> => {
@@ -97,7 +29,6 @@ const fileToBase64 = (file: File): Promise<string> => {
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) => `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
 
-// ★ Propsの定義
 interface ChatBaseProps {
   mode: ChatMode;
 }
@@ -108,12 +39,21 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [difyConversationId, setDifyConversationId] = useState<string>('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [showTemplates, setShowTemplates] = useState(true);
+
+  // モードに応じた初期メッセージ
+  const getInitialMessage = () => {
+    switch (mode) {
+      case 'analysis': return 'こんにちは！自己分析を始めましょう。あなたの過去の経験や価値観について聞かせてください。';
+      case 'create': return 'こんにちは！履歴書の作成をお手伝いします。アピールしたいポイントやエピソードはありますか？';
+      case 'critique': return 'こんにちは！履歴書の添削を行います。作成した文章やファイルをアップロードしてください。';
+      default: return 'こんにちは！Taskaへようこそ。何かお手伝いしましょうか？';
+    }
+  };
 
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'assistant', 
-      content: 'こんにちは！**Taska**へようこそ。\nまずは上のタブから、やりたいことを選んでください。' 
+      content: getInitialMessage()
     }
   ]);
   
@@ -138,15 +78,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   }, [input]);
 
-  const getCurrentTemplates = () => {
-    switch (mode) {
-      case 'create': return CREATE_TEMPLATES;
-      case 'critique': return CRITIQUE_TEMPLATES;
-      case 'analysis': return ANALYSIS_TEMPLATES;
-      default: return ANALYSIS_TEMPLATES;
-    }
-  };
-
   const getCurrentTitle = () => {
     switch (mode) {
       case 'create': return '履歴書作成';
@@ -161,7 +92,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const startNewChat = () => {
     setCurrentSessionId(null);
     setDifyConversationId('');
-    setMessages([{ role: 'assistant', content: '新しいチャットを開始しました。' }]);
+    setMessages([{ role: 'assistant', content: getInitialMessage() }]);
     setSelectedFiles([]);
     setInput('');
   };
@@ -181,11 +112,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     if (currentSessionId === sessionId) {
       startNewChat();
     }
-  };
-
-  const handleTemplateClick = (prompt: string) => {
-    setInput(prompt);
-    textareaRef.current?.focus();
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,6 +235,23 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
       const data = await res.json();
       
+      // ★ Difyからのファイル情報を解析して画像かどうかを判定
+      let assistantAttachments: Message['attachments'] = [];
+      if (data.files && Array.isArray(data.files)) {
+        assistantAttachments = data.files.map((file: any) => {
+          // タイプ判定の強化: typeフィールド または 拡張子で判定
+          const isImage = 
+            file.type === 'image' || 
+            /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name || '');
+            
+          return {
+            name: file.name || 'Generated File',
+            url: file.url,
+            type: isImage ? 'image' : 'file'
+          };
+        });
+      }
+      
       if (data.conversation_id) {
         setDifyConversationId(data.conversation_id);
         const sessionIndex = newSessions.findIndex(s => s.id === targetSessionId);
@@ -318,7 +261,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         }
       }
 
-      const assistantMessage: Message = { role: 'assistant', content: data.answer };
+      const assistantMessage: Message = { 
+        role: 'assistant', 
+        content: data.answer,
+        attachments: assistantAttachments
+      };
       
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
@@ -418,14 +365,20 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                 : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
                             }`}>
                                 {msg.attachments && msg.attachments.length > 0 && (
-                                  <div className="mb-3 flex flex-wrap gap-2">
+                                  <div className="mb-3 flex flex-col gap-2">
                                     {msg.attachments.map((att, i) => (
                                       <a key={i} href="#" onClick={(e) => handleFileClick(e, att.url, att.name)} className="block hover:opacity-80 transition-opacity cursor-pointer">
                                         {att.type === 'image' ? (
-                                          <div className="rounded-lg overflow-hidden border border-gray-200 w-32 h-32 bg-gray-50">
-                                            <img src={att.url || '/placeholder.png'} alt="preview" className="w-full h-full object-cover" />
+                                          // ★ 画像の場合は大きく表示 (アスペクト比維持)
+                                          <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 max-w-sm">
+                                            <img 
+                                              src={att.url || '/placeholder.png'} 
+                                              alt="preview" 
+                                              className="w-full h-auto max-h-[400px] object-contain" 
+                                            />
                                           </div>
                                         ) : (
+                                          // ファイルの場合はアイコン表示
                                           <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
                                             <div className="w-5 h-5 text-blue-500 flex-shrink-0" />
                                             <span className="font-medium text-gray-700 text-xs truncate">{att.name}</span>
@@ -463,42 +416,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 {/* 入力エリア */}
                 <div className="relative w-full max-w-4xl mx-auto flex-shrink-0 mb-2">
                     
-                    {/* テンプレートボタン */}
-                    <div className="mb-3">
-                      <div className="flex justify-between items-center mb-2 px-1">
-                        <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-yellow-500" />
-                          おすすめの質問（{getCurrentTitle()}）
-                        </span>
-                        <button 
-                          onClick={() => setShowTemplates(!showTemplates)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          {showTemplates ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      
-                      {showTemplates && (
-                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 px-1">
-                          {getCurrentTemplates().map((template, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleTemplateClick(template.prompt)}
-                              className="flex-shrink-0 flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[180px] max-w-[240px]"
-                            >
-                              <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors">
-                                {template.icon}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-gray-700 text-xs truncate mb-0.5">{template.label}</div>
-                                <div className="text-[10px] text-gray-500 truncate">{template.description}</div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" multiple accept=".pdf,.doc,.docx,image/*" />
                     
                     {selectedFiles.length > 0 && (
