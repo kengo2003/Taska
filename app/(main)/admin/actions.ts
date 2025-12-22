@@ -184,7 +184,7 @@ export async function uploadDocuments(
 
     try {
       data = JSON.parse(responseText);
-    } catch (err) {
+    } catch {
       console.error("JSON Parse Error. Body:", responseText);
       return {
         success: false,

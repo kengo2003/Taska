@@ -1,22 +1,18 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Upload,
-  Send,
-  X,
-} from "lucide-react";
+import { Upload, Send, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
-import ChatSidebar from "@/components/Chat/ChatSidebarContent";
+import Sidebar from "@/components/common/Sidebar";
+import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
 
-// ★共通の型定義をインポート
 import { ChatSession, Message } from "@/types/type";
+import Image from "next/image";
 
-// --- ヘルパー関数 ---
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -28,28 +24,29 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) =>
-  `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
+  `${date.getFullYear()}/${(date.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
 
 export default function QABase() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [difyConversationId, setDifyConversationId] = useState<string>('');
-  
-  // 初期メッセージを設定
+  const [difyConversationId, setDifyConversationId] = useState<string>("");
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "こんにちは！**学内Q&Aボット**です。\n学校生活、授業、施設、資格取得などについて、分からないことがあれば何でも聞いてください。"
-    }
+      content:
+        "こんにちは！**学内Q&Aボット**です。\n学校生活、授業、施設、資格取得などについて、分からないことがあれば何でも聞いてください。",
+    },
   ]);
-  
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // サイドバー管理用
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
@@ -64,7 +61,8 @@ export default function QABase() {
       const maxHeight = 150;
       const newHeight = Math.min(textarea.scrollHeight, maxHeight);
       textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+      textarea.style.overflowY =
+        textarea.scrollHeight > maxHeight ? "auto" : "hidden";
     }
   }, [input]);
 
@@ -72,12 +70,12 @@ export default function QABase() {
 
   const startNewChat = () => {
     setCurrentSessionId(null);
-    setDifyConversationId('');
+    setDifyConversationId("");
     setMessages([
       {
         role: "assistant",
-        content: "新しいQ&Aチャットを開始しました。何か質問はありますか？"
-      }
+        content: "新しいQ&Aチャットを開始しました。何か質問はありますか？",
+      },
     ]);
     setSelectedFiles([]);
     setInput("");
@@ -85,7 +83,7 @@ export default function QABase() {
 
   const loadSession = (session: ChatSession) => {
     setCurrentSessionId(session.id);
-    setDifyConversationId(session.difyConversationId || '');
+    setDifyConversationId(session.difyConversationId || "");
     setMessages(session.messages);
     setSelectedFiles([]);
     setInput("");
@@ -157,11 +155,14 @@ export default function QABase() {
     let attachmentDataList: Message["attachments"] = [];
     if (filesToSend.length > 0) {
       try {
-        const promises = filesToSend.map(async (file) => ({
-          name: file.name,
-          type: file.type.startsWith("image/") ? "image" : "file",
-          url: await fileToBase64(file),
-        } as const));
+        const promises = filesToSend.map(
+          async (file) =>
+            ({
+              name: file.name,
+              type: file.type.startsWith("image/") ? "image" : "file",
+              url: await fileToBase64(file),
+            } as const)
+        );
         attachmentDataList = await Promise.all(promises);
       } catch (e) {
         console.error(e);
@@ -197,7 +198,9 @@ export default function QABase() {
       };
       newSessions = [newSession, ...sessions];
     } else {
-      const sessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
+      const sessionIndex = newSessions.findIndex(
+        (s) => s.id === targetSessionId
+      );
       if (sessionIndex !== -1) {
         const updatedSession = {
           ...newSessions[sessionIndex],
@@ -232,7 +235,9 @@ export default function QABase() {
 
       if (data.conversation_id) {
         setDifyConversationId(data.conversation_id);
-        const sessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
+        const sessionIndex = newSessions.findIndex(
+          (s) => s.id === targetSessionId
+        );
         if (sessionIndex !== -1) {
           newSessions[sessionIndex].difyConversationId = data.conversation_id;
           setSessions([...newSessions]);
@@ -247,7 +252,9 @@ export default function QABase() {
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const finalSessionIndex = newSessions.findIndex((s) => s.id === targetSessionId);
+      const finalSessionIndex = newSessions.findIndex(
+        (s) => s.id === targetSessionId
+      );
       if (finalSessionIndex !== -1) {
         newSessions[finalSessionIndex].messages = finalMessages;
         setSessions([...newSessions]);
@@ -275,13 +282,15 @@ export default function QABase() {
 
   return (
     <div className="flex h-screen w-full">
-      <ChatSidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onNewChat={startNewChat}
-        onSelectSession={loadSession}
-        onDeleteSession={deleteSession}
-      />
+      <Sidebar>
+        <ChatSidebarContent
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onNewChat={startNewChat}
+          onSelectSession={loadSession}
+          onDeleteSession={deleteSession}
+        />
+      </Sidebar>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
@@ -289,7 +298,6 @@ export default function QABase() {
         <main className="flex-1 flex overflow-hidden relative bg-white">
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
-              
               <div className="mt-4 mb-4 shrink-0">
                 <h1 className="text-2xl font-bold text-gray-800 border-b-2 border-gray-300 inline-block pb-1 mb-4">
                   学内Q&A
@@ -299,7 +307,6 @@ export default function QABase() {
                 </p>
               </div>
 
-              {/* メッセージリスト */}
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {messages.map((msg, idx) => (
                   <div
@@ -311,7 +318,7 @@ export default function QABase() {
                     }`}
                   >
                     {msg.role === "assistant" && (
-                      <div className="w-8 h-8 relative rounded-full overflow-hidden flex-shrink-0 bg-green-100 border border-green-200">
+                      <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-green-100 border border-green-200">
                         <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">
                           Q
                         </div>
@@ -337,7 +344,7 @@ export default function QABase() {
                             >
                               {att.type === "image" ? (
                                 <div className="rounded-lg overflow-hidden border border-gray-200 w-32 h-32 bg-gray-50">
-                                  <img
+                                  <Image
                                     src={att.url || "/placeholder.png"}
                                     alt="preview"
                                     className="w-full h-full object-cover"
@@ -345,7 +352,7 @@ export default function QABase() {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
-                                  <div className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                                  <div className="w-5 h-5 text-blue-500 shrink-0" />
                                   <span className="font-medium text-gray-700 text-xs truncate">
                                     {att.name}
                                   </span>
@@ -356,11 +363,11 @@ export default function QABase() {
                         </div>
                       )}
 
-                      <div className="prose prose-sm max-w-none text-gray-800 break-words [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
+                      <div className="prose prose-sm max-w-none text-gray-800 wrap-break-word [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkBreaks]}
                           components={{
-                            a: ({ node, ...props }) => (
+                            a: ({ ...props }) => (
                               <a
                                 {...props}
                                 target="_blank"
@@ -368,7 +375,7 @@ export default function QABase() {
                                 className="text-blue-600 hover:underline"
                               />
                             ),
-                            p: ({ node, ...props }) => (
+                            p: ({ ...props }) => (
                               <p {...props} className="mb-2 last:mb-0" />
                             ),
                           }}
@@ -390,8 +397,7 @@ export default function QABase() {
               </div>
 
               {/* 入力エリア */}
-              <div className="relative w-full max-w-4xl mx-auto flex-shrink-0 mb-2">
-                
+              <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -448,7 +454,7 @@ export default function QABase() {
                     placeholder="ここに質問を入力..."
                     disabled={isLoading}
                     rows={1}
-                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-[56px] leading-relaxed"
+                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed"
                   />
 
                   <div className="absolute right-4 bottom-4 flex items-center gap-2">
@@ -471,7 +477,6 @@ export default function QABase() {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </main>
