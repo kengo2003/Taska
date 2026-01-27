@@ -33,6 +33,8 @@ export default function QABase() {
   const [isLoading, setIsLoading] = useState(false);
   const [difyConversationId, setDifyConversationId] = useState<string>("");
 
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -333,7 +335,27 @@ export default function QABase() {
                     >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
-                          {msg.attachments.map((att, i) => (
+                          {msg.attachments.map((att, i) => 
+                            att.type === "image" ? (
+                              <div
+                                key={i}
+                                className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 w-fit cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setZoomedImage(att.url);
+                                }}
+                              >
+                                <Image
+                                  src={att.url || "/placeholder.png"}
+                                  alt="preview"
+                                  width={500}
+                                  height={500}
+                                  sizes="120px"
+                                  className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain"
+                                  unoptimized
+                                />
+                              </div>
+                            ) : (
                             <a
                               key={i}
                               href="#"
@@ -342,22 +364,12 @@ export default function QABase() {
                               }
                               className="block hover:opacity-80 transition-opacity cursor-pointer"
                             >
-                              {att.type === "image" ? (
-                                <div className="rounded-lg overflow-hidden border border-gray-200 w-32 h-32 bg-gray-50">
-                                  <Image
-                                    src={att.url || "/placeholder.png"}
-                                    alt="preview"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
-                                  <div className="w-5 h-5 text-blue-500 shrink-0" />
-                                  <span className="font-medium text-gray-700 text-xs truncate">
-                                    {att.name}
-                                  </span>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
+                                <div className="w-5 h-5 text-blue-500 shrink-0" />
+                                <span className="font-medium text-gray-700 text-xs truncate">
+                                  {att.name}
+                                </span>
+                              </div>
                             </a>
                           ))}
                         </div>
@@ -377,6 +389,22 @@ export default function QABase() {
                             ),
                             p: ({ ...props }) => (
                               <p {...props} className="mb-2 last:mb-0" />
+                            ),
+                            img: ({ ...props }) => (
+                              <span
+                                className="inline-block cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => setZoomedImage(String(props.src))}
+                              >
+                              <Image
+                                src={String(props.src)}
+                                alt={props.alt || "image"}
+                                width={500}
+                                height={500}
+                                sizes="240px"
+                                className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
+                                unoptimized
+                              />
+                              </span>
                             ),
                           }}
                         >
@@ -481,6 +509,28 @@ export default function QABase() {
           </div>
         </main>
       </div>
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-200"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="relative w-full max-w-5xl h-[85vh]">
+            <Image
+              src={zoomedImage}
+              alt="Zoomed"
+              fill
+              className="object-contain"
+              unoptimized
+            />
+            <button
+              className="absolute top-[-1rem] right-[-1rem] md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50"
+              onClick={() => setZoomedImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
