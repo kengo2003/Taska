@@ -5,8 +5,7 @@ import {
   AdminSetUserPasswordCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-// 1. クライアントの設定
-// ここで .env に追加した AWS_ACCESS_KEY_ID 等を使います
+
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
   credentials: {
