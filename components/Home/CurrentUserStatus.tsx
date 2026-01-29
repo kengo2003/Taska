@@ -33,7 +33,7 @@ const CurrentUserStatus = () => {
     return <div className="text-sm text-gray-600">未ログイン</div>;
   }
 
-  const isAdmin = me.groups.includes("Admins");
+  const isAdmin = me.groups.includes("Admin");
 
   return (
     <div className="text-right text-sm">

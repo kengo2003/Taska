@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
     const groups = (claims["cognito:groups"] ?? []) as string[];
 
     // 管理画面だけ管理者チェック
-    if (pathname.startsWith("/admin") && !groups.includes("Admins")) {
+    if (pathname.startsWith("/admin") && !groups.includes("Admin")) {
       return NextResponse.redirect(new URL("/forbidden", req.url));
     }
 

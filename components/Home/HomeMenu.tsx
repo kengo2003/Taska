@@ -1,6 +1,41 @@
+"use client";
+
 import MenuButton from "./MenuButton";
+import { useEffect, useState } from "react";
+
+type Me =
+  | {
+      loggedIn: true;
+      email?: string;
+      groups: string[];
+    }
+  | {
+      loggedIn: false;
+    };
 
 const HomeMenu = () => {
+  const [me, setMe] = useState<Me | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data: Me = await res.json();
+        setMe(data);
+      } catch {
+        setMe({ loggedIn: false });
+      }
+    })();
+  }, []);
+
+  if (!me) return null;
+
+  if (!me.loggedIn) {
+    return <div className="text-sm text-gray-600">未ログイン</div>;
+  }
+
+  const isAdmin = me.groups.includes("Admin");
+
   return (
     <div className="grid grid-cols-3 gap-4 px-10">
       <MenuButton
@@ -18,11 +53,16 @@ const HomeMenu = () => {
         link="/chat"
         className="w-full bg-linear-to-b from-[#29CEEB] to-[#177585]"
       /> */}
-      <MenuButton
-        text="管理者"
-        link="/admin"
-        className="w-full bg-linear-to-br from-green-500 to-teal-600 text-white"
-      />
+
+      {isAdmin ? (
+        <MenuButton
+          text="管理者"
+          link="/admin"
+          className="w-full bg-linear-to-br from-green-500 to-teal-600 text-white"
+        />
+      ) : (
+        <></>
+      )}
     </div>
   );
 };
