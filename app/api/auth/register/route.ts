@@ -3,8 +3,8 @@ import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
+  AdminDeleteUserCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-
 
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
@@ -17,17 +17,14 @@ const client = new CognitoIdentityProviderClient({
 export async function POST(req: Request) {
   try {
     const { csvText } = await req.json();
-    const userPoolId = process.env.COGNITO_USER_POOL_ID!; // "us-east-1_4IAcnDSYZ"
+    const userPoolId = process.env.COGNITO_USER_POOL_ID!;
 
-    // 改行コードで分割してリスト化
     const lines = csvText.split(/\r?\n/).filter((line: string) => line.trim() !== "");
     const results = [];
 
     for (const line of lines) {
-      // カンマ区切りで分解
       const [email, password] = line.split(",");
 
-      // ヘッダー行や空行、データ不足をスキップ
       if (!email || !password || email.includes("email")) continue;
 
       const cleanEmail = email.trim();
@@ -47,25 +44,51 @@ export async function POST(req: Request) {
           })
         );
 
-        // ② パスワード固定化（Permanent: true）
-        // これにより「初回ログイン時の変更」が不要になります
-        await client.send(
-          new AdminSetUserPasswordCommand({
-            UserPoolId: userPoolId,
-            Username: cleanEmail,
-            Password: cleanPass,
-            Permanent: true, 
-          })
-        );
+        // ★ここから修正: パスワード設定を独自の try-catch で囲む
+        try {
+          // ② パスワード固定化
+          await client.send(
+            new AdminSetUserPasswordCommand({
+              UserPoolId: userPoolId,
+              Username: cleanEmail,
+              Password: cleanPass,
+              Permanent: true,
+            })
+          );
+          
+          // ここまで来たら成功
+          results.push({ email: cleanEmail, status: "OK" });
 
-        results.push({ email: cleanEmail, status: "OK" });
+        } catch (pwError: any) {
+          // ③ パスワード設定に失敗した場合（ポリシー違反など）
+          // 作成してしまったユーザーを削除して「なかったこと」にする
+          console.warn(`パスワード設定失敗のためロールバック: ${cleanEmail}`);
+          
+          await client.send(
+            new AdminDeleteUserCommand({
+              UserPoolId: userPoolId,
+              Username: cleanEmail,
+            })
+          );
+
+          // エラーとして記録（元のエラーメッセージを使う）
+          throw pwError;
+        }
+
       } catch (e: any) {
-        // エラー（既に存在するなど）
-        results.push({ email: cleanEmail, status: "Error", msg: e.message });
+        // ユーザー作成失敗、またはパスワード失敗によるロールバック後のエラー処理
+        let msg = e.message;
+        if (e.name === "InvalidPasswordException") {
+          msg = "パスワードポリシー違反（文字数や種類を確認してください）";
+        } else if (e.name === "UsernameExistsException") {
+          msg = "既に登録済みのメールアドレスです";
+        }
+        
+        results.push({ email: cleanEmail, status: "Error", msg: msg });
       }
-      
-      // AWSへの負荷軽減（API制限対策）
-      await new Promise(r => setTimeout(r, 100));
+
+      // 負荷軽減
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     return NextResponse.json({ results });
