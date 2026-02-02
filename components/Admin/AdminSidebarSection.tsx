@@ -17,6 +17,12 @@ const AdminSidebarSection = () => {
         >
           生徒
         </a>
+        <a
+          href="/admin/register"
+          className="block py-2 pl-5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          利用者登録
+        </a>
       </nav>
     </div>
   );
