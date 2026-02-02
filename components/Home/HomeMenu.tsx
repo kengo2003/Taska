@@ -36,8 +36,12 @@ const HomeMenu = () => {
 
   const isAdmin = me.groups.includes("Admin");
 
+  // 管理者かどうかでグリッドの列数を切り替える
+  // 管理者なら3列、それ以外なら2列にしてバランスをとる
+  const gridColsClass = isAdmin ? "grid-cols-3" : "grid-cols-2";
+
   return (
-    <div className="grid grid-cols-3 gap-4 px-10">
+    <div className={`grid ${gridColsClass} gap-4 px-10`}>
       <MenuButton
         text="履歴書ヘルパー"
         link="/chat"
@@ -48,20 +52,14 @@ const HomeMenu = () => {
         link="/q&a"
         className="w-full bg-linear-to-b from-[#2978B2] to-[#12334C]"
       />
-      {/* <MenuButton
-        text="FAQ"
-        link="/chat"
-        className="w-full bg-linear-to-b from-[#29CEEB] to-[#177585]"
-      /> */}
-
-      {isAdmin ? (
+      
+      {/* 管理者の場合のみDOMに描画する（空のタグも出力しない） */}
+      {isAdmin && (
         <MenuButton
           text="管理者"
           link="/admin"
           className="w-full bg-linear-to-br from-green-500 to-teal-600 text-white"
         />
-      ) : (
-        <></>
       )}
     </div>
   );
