@@ -5,8 +5,18 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import crypto from "crypto";
 
-const cookieName = process.env.AUTH_COOKIE_NAME || "session";
-const secureCookie = (process.env.AUTH_COOKIE_SECURE || "false") === "true";
+const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
+
+const isProduction = process.env.NODE_ENV === "production";
+const secureCookie = isProduction; 
+
+const client = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
+});
 
 function calcSecretHash(username: string) {
   const clientId = process.env.COGNITO_CLIENT_ID!;
@@ -22,17 +32,12 @@ export async function POST(req: Request) {
   const email = body?.email?.toString() ?? "";
   const password = body?.password?.toString() ?? "";
 
-  // UX/保険：ドメインチェック（最終防衛はCognito Trigger推奨）
   if (!email.endsWith("@hcs.ac.jp")) {
     return NextResponse.json({ error: "invalid_domain" }, { status: 401 });
   }
   if (!password) {
     return NextResponse.json({ error: "missing_password" }, { status: 400 });
   }
-
-  const client = new CognitoIdentityProviderClient({
-    region: process.env.AWS_REGION,
-  });
 
   try {
     const secretHash = calcSecretHash(email);
@@ -49,16 +54,29 @@ export async function POST(req: Request) {
       }),
     );
 
-    const idToken = res.AuthenticationResult?.IdToken;
-    if (!idToken) {
+    const accessToken = res.AuthenticationResult?.AccessToken;
+    
+    if (!accessToken) {
       return NextResponse.json({ error: "no_token" }, { status: 401 });
     }
 
-    const response = NextResponse.json({ ok: true });
+    let groups: string[] = [];
+    try {
+      const payloadPart = accessToken.split(".")[1];
+      const decodedPayload = JSON.parse(
+        Buffer.from(payloadPart, "base64").toString("utf-8")
+      );
+      groups = decodedPayload["cognito:groups"] || [];
+    } catch (e) {
+      console.error("Token decode error:", e);
+    }
 
-    response.cookies.set(cookieName, idToken, {
+    const response = NextResponse.json({ ok: true, groups });
+
+    // Cookie設定
+    response.cookies.set(cookieName, accessToken, {
       httpOnly: true,
-      secure: secureCookie,
+      secure: secureCookie, // false なら localhost でも保存されます
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60,

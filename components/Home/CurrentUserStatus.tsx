@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type Me =
   | {
@@ -39,10 +40,14 @@ const CurrentUserStatus = () => {
     <div className="text-right text-sm">
       <p className="text-gray-500">ログイン中のユーザ</p>
 
-      <div className="flex justify-end gap-2 font-medium">
+      <Link 
+        href="/settings" 
+        className="flex justify-end gap-2 font-medium hover:text-blue-600 hover:underline cursor-pointer transition-colors"
+        title="パスワードを変更する"
+      >
         <span>{isAdmin ? "管理者" : "ユーザ"}</span>
         <span>{me.email ?? "unknown"}</span>
-      </div>
+      </Link>
     </div>
   );
 };

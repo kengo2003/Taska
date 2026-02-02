@@ -12,16 +12,20 @@ export type CognitoClaims = JWTPayload & {
   email?: string;
   "cognito:groups"?: string[];
   token_use?: "id" | "access";
+  client_id?: string;
 };
 
-export async function verifyIdToken(idToken: string): Promise<CognitoClaims> {
-  const { payload } = await jwtVerify(idToken, jwks, {
+export async function verifyAccessToken(token: string): Promise<CognitoClaims> {
+  const { payload } = await jwtVerify(token, jwks, {
     issuer,
-    audience: clientId,
   });
 
-  if (payload.token_use !== "id") {
-    throw new Error("Invalid token_use");
+  if (payload.token_use !== "access") {
+    throw new Error("Invalid token_use. Expected access token.");
+  }
+
+  if (payload.client_id !== clientId) {
+    throw new Error("Invalid client_id");
   }
 
   return payload as CognitoClaims;
