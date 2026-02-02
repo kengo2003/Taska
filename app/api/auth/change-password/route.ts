@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+import {
+  CognitoIdentityProviderClient,
+  ChangePasswordCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
+import { cookies } from "next/headers";
+
+const client = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION || "ap-northeast-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  },
+});
+
+export async function POST(request: Request) {
+  try {
+    const { oldPassword, newPassword } = await request.json();
+
+    const cookieStore = await cookies();
+
+    const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
+    const idToken = cookieStore.get(cookieName)?.value;
+
+    if (!idToken) {
+      return NextResponse.json(
+        { error: "認証されていません。再度ログインしてください。" },
+        { status: 401 }
+      );
+    }
+
+    // AWS Cognitoに対してパスワード変更を要求
+    const command = new ChangePasswordCommand({
+      AccessToken: idToken,
+      PreviousPassword: oldPassword,
+      ProposedPassword: newPassword,
+    });
+
+    await client.send(command);
+
+    return NextResponse.json({ message: "パスワード変更成功" });
+
+  } catch (error: any) {
+    console.error("Change Password Error:", error);
+    
+    let errorMessage = "パスワード変更に失敗しました";
+    
+    if (error.name === "NotAuthorizedException") {
+      errorMessage = "現在のパスワードが間違っているか、セッションが切れています。";
+    } else if (error.name === "InvalidPasswordException") {
+      errorMessage = "新しいパスワードの要件（文字数、大文字小文字など）を満たしていません。";
+    } else if (error.name === "LimitExceededException") {
+      errorMessage = "試行回数が多すぎます。しばらく待ってから再試行してください。";
+    }
+
+    return NextResponse.json({ error: errorMessage }, { status: 400 });
+  }
+}

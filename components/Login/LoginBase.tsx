@@ -6,10 +6,6 @@ import { useRouter } from "next/navigation";
 import { LoginInput } from "@/components/Login/LoginInput";
 import { LoginButton } from "@/components/Login/LoginButton";
 
-type MeResponse =
-  | { loggedIn: true; email?: string; groups: string[]; sub?: string }
-  | { loggedIn: false };
-
 export default function LoginBase() {
   const router = useRouter();
 
@@ -32,26 +28,22 @@ export default function LoginBase() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await loginRes.json().catch(() => null);
+
       if (!loginRes.ok) {
-        const data = await loginRes.json().catch(() => null);
         throw new Error(data?.error ?? "IDまたはパスワードが間違っています");
       }
 
-      const meRes = await fetch("/api/auth/me", { method: "GET" });
-      const me: MeResponse = await meRes.json();
-
-      if (!("loggedIn" in me) || !me.loggedIn) {
-        throw new Error("ログイン状態を確認できませんでした");
-      }
-
-      const groups = me.groups ?? [];
+      const groups = data.groups ?? [];
+      
       if (groups.includes("Teachers")) {
         router.push("/teacher");
       } else if (groups.includes("Students")) {
         router.push("/student");
       } else {
-        router.push("/"); // or /forbidden
+        router.push("/"); 
       }
+
     } catch (error) {
       console.error("Login failed:", error);
       alert(
