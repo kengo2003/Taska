@@ -38,7 +38,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) =>
   `${date.getFullYear()}/${(date.getMonth() + 1)
     .toString()
@@ -56,20 +55,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
 
-  // モードに応じた初期メッセージ
-  // const getInitialMessage = () => {
-  //   switch (mode) {
-  //     case "analysis":
-  //       return "こんにちは！自己分析を始めましょう。あなたの過去の経験や価値観について聞かせてください。";
-  //     case "create":
-  //       return "こんにちは！履歴書の作成をお手伝いします。アピールしたいポイントやエピソードはありますか？";
-  //     case "critique":
-  //       return "こんにちは！履歴書の添削を行います。作成した文章やファイルをアップロードしてください。";
-  //     default:
-  //       return "こんにちは！Taskaへようこそ。何かお手伝いしましょうか？";
-  //   }
-  // };
-
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -83,6 +68,22 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // --- 1. 初期化時に履歴一覧を取得 (Refresh対策) ---
+  useEffect(() => {
+    const fetchHistoryIndex = async () => {
+      try {
+        const res = await fetch("/api/history");
+        if (res.ok) {
+          const data = await res.json();
+          setSessions(data);
+        }
+      } catch (e) {
+        console.error("履歴の読み込みに失敗:", e);
+      }
+    };
+    fetchHistoryIndex();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -138,21 +139,46 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     setInput("");
   };
 
-  const loadSession = (session: ChatSession) => {
+  // --- 2. セッション選択時に詳細を取得 ---
+  const loadSession = async (session: ChatSession) => {
     setCurrentSessionId(session.id);
     setDifyConversationId(session.difyConversationId || "");
-    setMessages(session.messages);
-    setSelectedFiles([]);
-    setInput("");
+    
+    // UIを即時反応させるために、既存キャッシュがあれば表示
+    setMessages(session.messages && session.messages.length > 0 ? session.messages : []);
+    setIsLoading(true);
+
+    try {
+      // S3から詳細データを取得
+      const res = await fetch(`/api/history/${session.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const loadedMessages = data.messages || [];
+        setMessages(loadedMessages);
+
+        // ローカルのsessionsステートも更新
+        setSessions((prev) => 
+          prev.map((s) => s.id === session.id ? { ...s, messages: loadedMessages } : s)
+        );
+      }
+    } catch (e) {
+      console.error("詳細読み込みエラー:", e);
+    } finally {
+      setIsLoading(false);
+      setSelectedFiles([]);
+      setInput("");
+    }
   };
 
   const deleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (!confirm("このチャット履歴を削除しますか？")) return;
+    
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
     }
+    // TODO: サーバー側の削除APIができたら呼ぶ
   };
 
   const handleTemplateClick = (prompt: string) => {
@@ -178,108 +204,69 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     );
   };
 
+  // ★修正: 引数から name を削除
   const handleFileClick = async (
     e: React.MouseEvent,
-    url: string,
-    name: string
+    url: string
   ) => {
     e.preventDefault();
     if (!url) return;
     try {
-      if (url.startsWith("http") || url.startsWith("blob:")) {
-        window.open(url, "_blank");
-        return;
-      }
-      if (url.startsWith("data:")) {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, "_blank");
-        if (!newWindow) {
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = name;
-          link.click();
-        }
-      }
+      window.open(url, "_blank");
     } catch (error) {
       console.error(error);
       alert("ファイルを開けませんでした。");
     }
   };
 
+  // --- 3. メッセージ送信ハンドラ (S3連携版) ---
   const handleSend = async () => {
     if ((!input.trim() && selectedFiles.length === 0) || isLoading) return;
 
     const messageToSend = input;
     const filesToSend = [...selectedFiles];
 
+    // プレビュー用Base64作成
     let attachmentDataList: Message["attachments"] = [];
     if (filesToSend.length > 0) {
       try {
-        const promises = filesToSend.map(
-          async (file) =>
-            ({
-              name: file.name,
-              type: file.type.startsWith("image/") ? "image" : "file",
-              url: await fileToBase64(file),
-            } as const)
-        );
+        const promises = filesToSend.map(async (file) => ({
+          name: file.name,
+          type: file.type.startsWith("image/") ? "image" : "file",
+          url: await fileToBase64(file),
+        } as const));
         attachmentDataList = await Promise.all(promises);
       } catch (e) {
         console.error(e);
       }
     }
 
+    // ユーザーメッセージのUI反映
     const userMessage: Message = {
       role: "user",
       content: messageToSend,
       attachments: attachmentDataList,
     };
 
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const tempMessages = [...messages, userMessage];
+    setMessages(tempMessages);
     setInput("");
     setSelectedFiles([]);
     setIsLoading(true);
-
-    // セッション管理
-    let targetSessionId = currentSessionId;
-    let newSessions = [...sessions];
-
-    if (!targetSessionId) {
-      targetSessionId = generateId();
-      setCurrentSessionId(targetSessionId);
-      const title = messageToSend.trim().substring(0, 20) || getCurrentTitle();
-      const newSession: ChatSession = {
-        id: targetSessionId,
-        title: title,
-        date: formatDate(new Date()),
-        messages: updatedMessages,
-        difyConversationId: difyConversationId,
-      };
-      newSessions = [newSession, ...sessions];
-    } else {
-      const sessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
-      if (sessionIndex !== -1) {
-        const updatedSession = {
-          ...newSessions[sessionIndex],
-          messages: updatedMessages,
-        };
-        newSessions.splice(sessionIndex, 1);
-        newSessions.unshift(updatedSession);
-      }
-    }
-    setSessions(newSessions);
 
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
       formData.append("user", "local-user");
+      
+      // アプリ管理用ID (S3の保存先)
+      if (currentSessionId) {
+        formData.append("conversation_id", currentSessionId);
+      }
+
+      // ★ Dify管理用ID (AIの文脈用)
       if (difyConversationId) {
-        formData.append("conversation_id", difyConversationId);
+        formData.append("dify_conversation_id", difyConversationId);
       }
 
       filesToSend.forEach((file) => formData.append("file", file));
@@ -290,13 +277,37 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("API Error:", errorData);
-        throw new Error(res.statusText);
+        throw new Error(`API Error: ${res.statusText}`);
       }
 
       const data = await res.json();
 
+      // サーバーから返却されたIDを取得
+      const serverSessionId = data.conversation_id; // アプリ用ID
+      const newDifyId = data.dify_conversation_id;  // Dify用ID
+
+      // ステート更新
+      if (serverSessionId) {
+        setCurrentSessionId(serverSessionId);
+        if (newDifyId) setDifyConversationId(newDifyId);
+
+        // 新規チャットだった場合、サイドバーに追加
+        setSessions(prev => {
+           const exists = prev.find(s => s.id === serverSessionId);
+           if (exists) return prev;
+           
+           const newSession: ChatSession = {
+             id: serverSessionId,
+             title: messageToSend.trim().substring(0, 20) || getCurrentTitle(),
+             date: formatDate(new Date()),
+             messages: [], // 詳細はAPI側で保存済み
+             difyConversationId: newDifyId
+           };
+           return [newSession, ...prev];
+        });
+      }
+
+      // アシスタントメッセージの作成
       let assistantAttachments: Message["attachments"] = [];
       if (data.files && Array.isArray(data.files)) {
         assistantAttachments = data.files.map(
@@ -314,34 +325,29 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         );
       }
 
-      if (data.conversation_id) {
-        setDifyConversationId(data.conversation_id);
-        const sessionIndex = newSessions.findIndex(
-          (s) => s.id === targetSessionId
-        );
-        if (sessionIndex !== -1) {
-          newSessions[sessionIndex].difyConversationId = data.conversation_id;
-          setSessions([...newSessions]);
-        }
-      }
-
       const assistantMessage: Message = {
         role: "assistant",
-
         content: data.answer,
         attachments: assistantAttachments,
       };
 
-      const finalMessages = [...updatedMessages, assistantMessage];
+      const finalMessages = [...tempMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const finalSessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
-      if (finalSessionIndex !== -1) {
-        newSessions[finalSessionIndex].messages = finalMessages;
-        setSessions([...newSessions]);
-      }
+      // セッションリスト内のキャッシュも更新
+      setSessions((prev) => {
+        return prev.map(s => {
+          if (s.id === (serverSessionId || currentSessionId)) {
+            return {
+              ...s,
+              messages: finalMessages,
+              difyConversationId: newDifyId || s.difyConversationId
+            };
+          }
+          return s;
+        });
+      });
+
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
@@ -449,8 +455,9 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                             <a
                               key={i}
                               href="#"
+                              // ★修正: 引数を減らしました
                               onClick={(e) =>
-                                handleFileClick(e, att.url, att.name)
+                                handleFileClick(e, att.url)
                               }
                               className="block hover:opacity-80 transition-opacity cursor-pointer"
                             >
@@ -459,6 +466,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                   <Image
                                     src={att.url || "/placeholder.png"}
                                     alt="preview"
+                                    width={128}
+                                    height={128}
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
