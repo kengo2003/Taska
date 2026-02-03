@@ -54,4 +54,5 @@ export type ChatSession = {
   date: string;
   messages: Message[];
   difyConversationId: string;
+  type?: 'qa' | 'resume';
 };

@@ -22,7 +22,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
 const formatDate = (date: Date) =>
   `${date.getFullYear()}/${(date.getMonth() + 1)
     .toString()
@@ -51,6 +50,24 @@ export default function QABase() {
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  // ページ読み込み時に履歴一覧を取得
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const res = await fetch("/api/history?type=qa");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setSessions(data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load history:", error);
+      }
+    };
+    fetchSessions();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,17 +100,37 @@ export default function QABase() {
     setInput("");
   };
 
-  const loadSession = (session: ChatSession) => {
+  const loadSession = async (session: ChatSession) => {
+    if (currentSessionId === session.id) return;
+
     setCurrentSessionId(session.id);
-    setDifyConversationId(session.difyConversationId || "");
-    setMessages(session.messages);
-    setSelectedFiles([]);
-    setInput("");
+    setMessages([]); 
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/history/${session.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.messages) {
+          setMessages(data.messages);
+          setDifyConversationId(data.difyConversationId || "");
+        }
+      } else {
+        console.error("Failed to load session details");
+      }
+    } catch (error) {
+      console.error("Error loading session:", error);
+    } finally {
+      setIsLoading(false);
+      setSelectedFiles([]);
+      setInput("");
+    }
   };
 
   const deleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (!confirm("このチャット履歴を削除しますか？")) return;
+    
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
@@ -184,42 +221,18 @@ export default function QABase() {
     setIsLoading(true);
 
     // セッション管理
-    let targetSessionId = currentSessionId;
-    let newSessions = [...sessions];
 
-    if (!targetSessionId) {
-      targetSessionId = generateId();
-      setCurrentSessionId(targetSessionId);
-      const title = messageToSend.trim().substring(0, 20) || "Q&Aチャット";
-      const newSession: ChatSession = {
-        id: targetSessionId,
-        title: title,
-        date: formatDate(new Date()),
-        messages: updatedMessages,
-        difyConversationId: difyConversationId,
-      };
-      newSessions = [newSession, ...sessions];
-    } else {
-      const sessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
-      if (sessionIndex !== -1) {
-        const updatedSession = {
-          ...newSessions[sessionIndex],
-          messages: updatedMessages,
-        };
-        newSessions.splice(sessionIndex, 1);
-        newSessions.unshift(updatedSession);
-      }
-    }
-    setSessions(newSessions);
+    // 不要な if (!targetSessionId) ブロックは削除しました (tempId未使用のため)
 
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
       formData.append("user", "local-user-qa");
       if (difyConversationId) {
-        formData.append("conversation_id", difyConversationId);
+        formData.append("dify_conversation_id", difyConversationId);
+      }
+      if (currentSessionId) {
+        formData.append("conversation_id", currentSessionId);
       }
 
       filesToSend.forEach((file) => formData.append("file", file));
@@ -235,32 +248,33 @@ export default function QABase() {
 
       const data = await res.json();
 
-      if (data.conversation_id) {
-        setDifyConversationId(data.conversation_id);
-        const sessionIndex = newSessions.findIndex(
-          (s) => s.id === targetSessionId
-        );
-        if (sessionIndex !== -1) {
-          newSessions[sessionIndex].difyConversationId = data.conversation_id;
-          setSessions([...newSessions]);
-        }
-      }
+      const serverSessionId = data.conversation_id;
+      const serverDifyId = data.dify_conversation_id;
+
+      setCurrentSessionId(serverSessionId);
+      setDifyConversationId(serverDifyId);
 
       const assistantMessage: Message = {
         role: "assistant",
         content: data.answer,
       };
-
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const finalSessionIndex = newSessions.findIndex(
-        (s) => s.id === targetSessionId
-      );
-      if (finalSessionIndex !== -1) {
-        newSessions[finalSessionIndex].messages = finalMessages;
-        setSessions([...newSessions]);
+      if (!currentSessionId) {
+        const newSession: ChatSession = {
+          id: serverSessionId,
+          title: messageToSend.trim().substring(0, 20) || "Q&Aチャット",
+          date: formatDate(new Date()),
+          messages: [],
+          difyConversationId: serverDifyId,
+        };
+        setSessions([newSession, ...sessions]);
+      } else {
+        // 既存のセッション更新ロジックが必要な場合はここに記述
+        // 今回は単純に currentSessionId がある場合、リストの再取得は行わない
       }
+
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
