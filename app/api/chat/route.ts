@@ -211,6 +211,7 @@ export async function POST(request: Request) {
         date: new Date().toLocaleDateString('ja-JP'),
         messages: [],
         difyConversationId: newDifyConversationId, // ここにも保存
+        type: 'resume',
       };
       await saveJson('chat/index.json', [newSessionSummary, ...index]);
     }

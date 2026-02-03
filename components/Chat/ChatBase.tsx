@@ -73,7 +73,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   useEffect(() => {
     const fetchHistoryIndex = async () => {
       try {
-        const res = await fetch("/api/history");
+        const res = await fetch("/api/history?type=resume");
         if (res.ok) {
           const data = await res.json();
           setSessions(data);
