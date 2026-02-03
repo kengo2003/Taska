@@ -1,3 +1,5 @@
+// types/type.ts
+
 export interface FileData {
   id: string;
   fileName: string;
