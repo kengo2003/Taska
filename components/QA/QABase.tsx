@@ -127,13 +127,27 @@ export default function QABase() {
     }
   };
 
-  const deleteSession = (e: React.MouseEvent, sessionId: string) => {
+  // 削除機能
+  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
-    if (!confirm("このチャット履歴を削除しますか？")) return;
+    if (!confirm("このチャット履歴を削除しますか？\n※S3上のファイルも削除されます")) return;
 
+    // 1. UIから先行して削除
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
+    }
+
+    // 2. サーバーから削除
+    try {
+      const res = await fetch(`/api/history/${sessionId}`, { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error("Failed to delete session");
+      }
+      console.log("Deleted:", sessionId);
+    } catch (error) {
+      console.error("Delete Error:", error);
+      alert("削除に失敗しました（画面上は削除されました）");
     }
   };
 
@@ -155,30 +169,16 @@ export default function QABase() {
     );
   };
 
+  // ▼▼▼ 修正: 引数 name を削除しました ▼▼▼
   const handleFileClick = async (
     e: React.MouseEvent,
     url: string,
-    name: string,
+    // name: string, // ← 削除
   ) => {
     e.preventDefault();
     if (!url) return;
     try {
-      if (url.startsWith("http") || url.startsWith("blob:")) {
-        window.open(url, "_blank");
-        return;
-      }
-      if (url.startsWith("data:")) {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, "_blank");
-        if (!newWindow) {
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = name;
-          link.click();
-        }
-      }
+      window.open(url, "_blank");
     } catch (error) {
       console.error(error);
       alert("ファイルを開けませんでした。");
@@ -220,12 +220,12 @@ export default function QABase() {
     setSelectedFiles([]);
     setIsLoading(true);
 
-    // セッション管理
-
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "local-user-qa");
+      // userはバックエンドのトークンで上書きされるためダミー
+      formData.append("user", "client-user-qa");
+      
       if (difyConversationId) {
         formData.append("dify_conversation_id", difyConversationId);
       }
@@ -268,9 +268,8 @@ export default function QABase() {
           difyConversationId: serverDifyId,
         };
         setSessions([newSession, ...sessions]);
-      } else {
-        // 既存のセッション更新ロジックが必要な場合はここ
-      }
+      } 
+
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
@@ -369,8 +368,9 @@ export default function QABase() {
                               <a
                                 key={i}
                                 href="#"
+                                // ▼▼▼ 修正: att.name を削除しました ▼▼▼
                                 onClick={(e) =>
-                                  handleFileClick(e, att.url, att.name)
+                                  handleFileClick(e, att.url)
                                 }
                                 className="block hover:opacity-80 transition-opacity cursor-pointer"
                               >
