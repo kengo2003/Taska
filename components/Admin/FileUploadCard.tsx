@@ -74,7 +74,7 @@ const FileUploadCard = ({
   if (categories.length === 0) return <div>ナレッジベースが見つかりません</div>;
   return (
     <div className="border border-dashed rounded-xl border-[#3DA8FF] p-5 w-lg text-center bg-[#EFF8FF]">
-      <p>削除したいナレッジを選択</p>
+      <p>追加したいナレッジを選択</p>
       <div className="mb-6">
         <Select value={selectedTableId} onValueChange={handleSelectChange}>
           <SelectTrigger>

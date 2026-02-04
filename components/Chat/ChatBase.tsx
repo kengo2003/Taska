@@ -164,6 +164,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
             s.id === session.id ? { ...s, messages: loadedMessages } : s,
           ),
         );
+      } else {
+        console.error("履歴詳細の取得に失敗しました");
       }
     } catch (e) {
       console.error("詳細読み込みエラー:", e);
@@ -174,15 +176,30 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
-  const deleteSession = (e: React.MouseEvent, sessionId: string) => {
+  // ▼▼▼ 修正: 削除APIを呼び出すように変更 ▼▼▼
+  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
-    if (!confirm("このチャット履歴を削除しますか？")) return;
+    if (!confirm("このチャット履歴を削除しますか？\n※S3上のファイルも削除されます")) return;
 
+    // 1. UIから先行して削除 (体感速度向上)
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
     }
-    // サーバー側の削除APIができたら呼ぶ
+
+    // 2. サーバー(S3)から削除
+    try {
+      const res = await fetch(`/api/history/${sessionId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error("削除に失敗しました");
+      }
+      console.log("削除完了:", sessionId);
+    } catch (error) {
+      console.error("削除エラー:", error);
+      alert("サーバー上の削除に失敗しました（画面上は削除されました）");
+    }
   };
 
   const handleTemplateClick = (prompt: string) => {
@@ -261,7 +278,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "local-user");
+      // userはバックエンドのトークンで上書きされるためダミーでOK
+      formData.append("user", "client-user");
 
       // アプリ管理用ID (S3の保存先)
       if (currentSessionId) {
@@ -458,7 +476,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                             <a
                               key={i}
                               href="#"
-                              // ★修正: 引数を減らしました
                               onClick={(e) => handleFileClick(e, att.url)}
                               className="block hover:opacity-80 transition-opacity cursor-pointer"
                             >
