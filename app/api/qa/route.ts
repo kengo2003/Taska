@@ -161,11 +161,24 @@ export async function POST(request: Request) {
     }
 
     const data = (await chatRes.json()) as any;
+
+    if (data.answer && typeof data.answer === 'string') {
+      
+      data.answer = data.answer.replace(
+        /https?:\/\/[^)]+\/v1\/files\//g, 
+        '/files/'
+      );
+      
+      data.answer = data.answer.replace(
+        /https?:\/\/[^)]+\/files\//g, 
+        '/files/'
+      );
+      
+      console.log('[QA] URL replaced for proxy');
+    }
+
     const newDifyConversationId = data.conversation_id;
 
-    // ----------------------------------------------------------------
-    // 5. S3へ履歴保存 (ユーザー隔離パスへ)
-    // ----------------------------------------------------------------
     console.log("[QA] Saving history to S3...");
 
     // パス定義 (自分専用のパス)
