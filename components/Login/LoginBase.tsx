@@ -35,15 +35,14 @@ export default function LoginBase() {
       }
 
       const groups = data.groups ?? [];
-      
+
       if (groups.includes("Teachers")) {
         router.push("/teacher");
       } else if (groups.includes("Students")) {
         router.push("/student");
       } else {
-        router.push("/"); 
+        router.push("/");
       }
-
     } catch (error) {
       console.error("Login failed:", error);
       alert(
@@ -62,7 +61,8 @@ export default function LoginBase() {
         <Image
           src="/TaskaLogo.png"
           alt="Taska Logo"
-          fill
+          width={350}
+          height={150}
           className="object-contain"
           priority
         />

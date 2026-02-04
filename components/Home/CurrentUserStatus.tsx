@@ -40,8 +40,8 @@ const CurrentUserStatus = () => {
     <div className="text-right text-sm">
       <p className="text-gray-500">ログイン中のユーザ</p>
 
-      <Link 
-        href="/settings" 
+      <Link
+        href="/settings"
         className="flex justify-end gap-2 font-medium hover:text-blue-600 hover:underline cursor-pointer transition-colors"
         title="パスワードを変更する"
       >

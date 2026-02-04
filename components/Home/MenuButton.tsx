@@ -1,11 +1,6 @@
 import { Button } from "../ui/button";
 import Link from "next/link";
-
-interface MenuButtonProps {
-  text: string;
-  link: string;
-  className: string;
-}
+import { MenuButtonProps } from "@/types/type";
 
 const MenuButton = ({ text, link, className }: MenuButtonProps) => {
   return (

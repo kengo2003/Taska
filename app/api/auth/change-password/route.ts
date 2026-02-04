@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!idToken) {
       return NextResponse.json(
         { error: "認証されていません。再度ログインしてください。" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -39,18 +39,20 @@ export async function POST(request: Request) {
     await client.send(command);
 
     return NextResponse.json({ message: "パスワード変更成功" });
-
   } catch (error: any) {
     console.error("Change Password Error:", error);
-    
+
     let errorMessage = "パスワード変更に失敗しました";
-    
+
     if (error.name === "NotAuthorizedException") {
-      errorMessage = "現在のパスワードが間違っているか、セッションが切れています。";
+      errorMessage =
+        "現在のパスワードが間違っているか、セッションが切れています。";
     } else if (error.name === "InvalidPasswordException") {
-      errorMessage = "新しいパスワードの要件（文字数、大文字小文字など）を満たしていません。";
+      errorMessage =
+        "新しいパスワードの要件（文字数、大文字小文字など）を満たしていません。";
     } else if (error.name === "LimitExceededException") {
-      errorMessage = "試行回数が多すぎます。しばらく待ってから再試行してください。";
+      errorMessage =
+        "試行回数が多すぎます。しばらく待ってから再試行してください。";
     }
 
     return NextResponse.json({ error: errorMessage }, { status: 400 });

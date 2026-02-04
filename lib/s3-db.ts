@@ -1,4 +1,8 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 
 // 環境変数からS3クライアントを初期化
 const s3 = new S3Client({
@@ -19,7 +23,7 @@ export async function fetchJson<T>(key: string): Promise<T | null> {
     const str = await response.Body?.transformToString();
     return str ? JSON.parse(str) : null;
   } catch (e: any) {
-    if (e.name === 'NoSuchKey') return null; // ファイルがない場合はnullを返す
+    if (e.name === "NoSuchKey") return null; // ファイルがない場合はnullを返す
     throw e;
   }
 }

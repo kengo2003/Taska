@@ -29,7 +29,7 @@ const FileUploadCard = ({
 }: Props) => {
   const [state, formAction, isPending] = useActionState(
     uploadDocuments,
-    initialState
+    initialState,
   );
   const [selectedTableId, setSelectedTableId] = useState<string>(initialKbId);
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);

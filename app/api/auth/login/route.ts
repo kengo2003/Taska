@@ -8,7 +8,7 @@ import crypto from "crypto";
 const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
 
 const isProduction = process.env.NODE_ENV === "production";
-const secureCookie = isProduction; 
+// const secureCookie = isProduction;
 
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     );
 
     const accessToken = res.AuthenticationResult?.AccessToken;
-    
+
     if (!accessToken) {
       return NextResponse.json({ error: "no_token" }, { status: 401 });
     }
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     try {
       const payloadPart = accessToken.split(".")[1];
       const decodedPayload = JSON.parse(
-        Buffer.from(payloadPart, "base64").toString("utf-8")
+        Buffer.from(payloadPart, "base64").toString("utf-8"),
       );
       groups = decodedPayload["cognito:groups"] || [];
     } catch (e) {
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     // Cookie設定
     response.cookies.set(cookieName, accessToken, {
       httpOnly: true,
-      secure: secureCookie, // false なら localhost でも保存されます
+      secure: false, // false ならlocalhostでも保存されます
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60,
