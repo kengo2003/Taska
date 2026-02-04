@@ -85,7 +85,7 @@ export default function QABase() {
     }
   }, [input]);
 
-  // --- ハンドラ ---
+  // ハンドラ
 
   const startNewChat = () => {
     setCurrentSessionId(null);
@@ -104,7 +104,7 @@ export default function QABase() {
     if (currentSessionId === session.id) return;
 
     setCurrentSessionId(session.id);
-    setMessages([]); 
+    setMessages([]);
     setIsLoading(true);
 
     try {
@@ -130,7 +130,7 @@ export default function QABase() {
   const deleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (!confirm("このチャット履歴を削除しますか？")) return;
-    
+
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
@@ -151,14 +151,14 @@ export default function QABase() {
 
   const removeFile = (indexToRemove: number) => {
     setSelectedFiles((prev) =>
-      prev.filter((_, index) => index !== indexToRemove)
+      prev.filter((_, index) => index !== indexToRemove),
     );
   };
 
   const handleFileClick = async (
     e: React.MouseEvent,
     url: string,
-    name: string
+    name: string,
   ) => {
     e.preventDefault();
     if (!url) return;
@@ -200,7 +200,7 @@ export default function QABase() {
               name: file.name,
               type: file.type.startsWith("image/") ? "image" : "file",
               url: await fileToBase64(file),
-            } as const)
+            }) as const,
         );
         attachmentDataList = await Promise.all(promises);
       } catch (e) {
@@ -221,8 +221,6 @@ export default function QABase() {
     setIsLoading(true);
 
     // セッション管理
-
-    // 不要な if (!targetSessionId) ブロックは削除しました (tempId未使用のため)
 
     try {
       const formData = new FormData();
@@ -271,10 +269,8 @@ export default function QABase() {
         };
         setSessions([newSession, ...sessions]);
       } else {
-        // 既存のセッション更新ロジックが必要な場合はここに記述
-        // 今回は単純に currentSessionId がある場合、リストの再取得は行わない
+        // 既存のセッション更新ロジックが必要な場合はここ
       }
-
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
@@ -349,7 +345,7 @@ export default function QABase() {
                     >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
-                          {msg.attachments.map((att, i) => 
+                          {msg.attachments.map((att, i) =>
                             att.type === "image" ? (
                               <div
                                 key={i}
@@ -370,22 +366,23 @@ export default function QABase() {
                                 />
                               </div>
                             ) : (
-                            <a
-                              key={i}
-                              href="#"
-                              onClick={(e) =>
-                                handleFileClick(e, att.url, att.name)
-                              }
-                              className="block hover:opacity-80 transition-opacity cursor-pointer"
-                            >
-                              <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
-                                <div className="w-5 h-5 text-blue-500 shrink-0" />
-                                <span className="font-medium text-gray-700 text-xs truncate">
-                                  {att.name}
-                                </span>
-                              </div>
-                            </a>
-                          ))}
+                              <a
+                                key={i}
+                                href="#"
+                                onClick={(e) =>
+                                  handleFileClick(e, att.url, att.name)
+                                }
+                                className="block hover:opacity-80 transition-opacity cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
+                                  <div className="w-5 h-5 text-blue-500 shrink-0" />
+                                  <span className="font-medium text-gray-700 text-xs truncate">
+                                    {att.name}
+                                  </span>
+                                </div>
+                              </a>
+                            ),
+                          )}
                         </div>
                       )}
 
@@ -407,17 +404,19 @@ export default function QABase() {
                             img: ({ ...props }) => (
                               <span
                                 className="inline-block cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => setZoomedImage(String(props.src))}
+                                onClick={() =>
+                                  setZoomedImage(String(props.src))
+                                }
                               >
-                              <Image
-                                src={String(props.src)}
-                                alt={props.alt || "image"}
-                                width={500}
-                                height={500}
-                                sizes="240px"
-                                className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
-                                unoptimized
-                              />
+                                <Image
+                                  src={String(props.src)}
+                                  alt={props.alt || "image"}
+                                  width={500}
+                                  height={500}
+                                  sizes="240px"
+                                  className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
+                                  unoptimized
+                                />
                               </span>
                             ),
                           }}
@@ -537,7 +536,7 @@ export default function QABase() {
               unoptimized
             />
             <button
-              className="absolute top-[-1rem] right-[-1rem] md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50"
+              className="absolute -top-4 -right-4 md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50"
               onClick={() => setZoomedImage(null)}
             >
               <X className="w-6 h-6" />

@@ -69,8 +69,8 @@ export function FileListSection({ kbId }: { kbId: string }) {
       files.map((file) =>
         Number(file.id) === fileId
           ? { ...file, fileName: editingFileName }
-          : file
-      )
+          : file,
+      ),
     );
     setEditingId(null);
     setEditingFileName("");

@@ -4,7 +4,7 @@ import { ChatSession } from "@/types/type";
 import { cookies } from "next/headers";
 import { verifyAccessToken } from "@/lib/auth/jwt"; 
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const sessions = await fetchJson<ChatSession[]>(userHistoryPath) || [];
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
+    const type = searchParams.get("type");
 
     if (!type) {
       return NextResponse.json(sessions);
@@ -46,9 +46,11 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(filteredSessions);
-
   } catch (error) {
     console.error("History fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch history" },
+      { status: 500 },
+    );
   }
 }
