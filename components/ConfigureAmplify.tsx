@@ -1,7 +1,6 @@
 "use client";
 
 import { Amplify } from "aws-amplify";
-import { useEffect } from "react";
 
 // Amplifyの設定
 Amplify.configure({

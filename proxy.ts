@@ -3,7 +3,7 @@ import { verifyAccessToken } from "@/lib/auth/jwt";
 
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "taska_session";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/login")) {
@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
-    console.error("Middleware Auth Error:", error);
+    console.error("Proxy Auth Error:", error);
     return NextResponse.redirect(new URL("/login", req.url));
   }
 }

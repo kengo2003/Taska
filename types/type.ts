@@ -1,5 +1,3 @@
-// types/type.ts
-
 export interface FileData {
   id: string;
   fileName: string;
@@ -54,5 +52,42 @@ export type ChatSession = {
   date: string;
   messages: Message[];
   difyConversationId: string;
-  type?: 'qa' | 'resume';
+  type?: "qa" | "resume";
 };
+
+export interface MenuButtonProps {
+  text: string;
+  link: string;
+  className: string;
+}
+
+export interface DifyFile {
+  type: "image" | "document";
+  transfer_method: "local_file" | "remote_url";
+  upload_file_id: string;
+}
+
+export interface UploadResponse {
+  id: string;
+  name: string;
+  size: number;
+  extension: string;
+  mime_type: string;
+  created_by: string;
+  created_at: number;
+}
+
+export interface ChatPayload {
+  inputs: Record<string, unknown>;
+  query: string;
+  response_mode: "blocking" | "streaming";
+  user: string;
+  conversation_id?: string;
+  files?: DifyFile[];
+}
+
+export interface LocalAttachment {
+  name: string;
+  type: "image" | "file";
+  url: string;
+}
