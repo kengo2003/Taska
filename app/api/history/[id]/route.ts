@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { s3, BUCKET_NAME, fetchJson, saveJson } from "@/lib/s3-db";
 import { verifyAccessToken } from "@/lib/auth/jwt"; 
+import { ChatSession } from "@/types/type";
 
 export const dynamic = "force-dynamic";
 
