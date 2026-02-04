@@ -20,6 +20,7 @@ const SidebarButton = ({ onClick, isOpen }: Props) => {
         className={`transition-transform duration-300 ${
           isOpen ? "" : "rotate-180"
         }`}
+        unoptimized
       />
     </button>
   );

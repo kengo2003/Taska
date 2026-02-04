@@ -11,6 +11,7 @@ const Header = () => {
           width={150}
           height={100}
           className="p-3"
+          unoptimized
         />
       </Link>
     </div>

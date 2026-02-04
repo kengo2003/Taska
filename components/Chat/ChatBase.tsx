@@ -487,6 +487,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                     width={128}
                                     height={128}
                                     className="w-full h-full object-cover"
+                                    unoptimized
                                   />
                                 </div>
                               ) : (
