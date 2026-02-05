@@ -277,7 +277,7 @@ export default function QABase() {
   };
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex min-h-[100dvh] w-full">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
         <ChatSidebarContent
           sessions={sessions}
