@@ -12,8 +12,10 @@ const NewFileUploadSection = ({
   onKbIdChange,
 }: Props) => {
   return (
-    <div>
-      <p className="py-5 font-bold text-lg">新規ファイルをアップロード</p>
+    <div className="w-full">
+      <p className="py-4 md:py-5 font-bold text-base md:text-lg px-1">
+        新規ファイルをアップロード
+      </p>
       <FileUploadCard
         onUploadSuccess={onUploadSuccess}
         initialKbId={currentKbId}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useActionState } from "react";
+import { useEffect, useState, useActionState, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -34,22 +34,16 @@ const FileUploadCard = ({
   const [selectedTableId, setSelectedTableId] = useState<string>(initialKbId);
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 初期化が完了したかを追跡するRef
+  const initializedRef = useRef(false);
 
+  // Effect 1: カテゴリデータの取得 (マウント時に一度だけ実行)
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const data = await getKnowledgeBases();
         setCategories(data);
-        if (data.length > 0) {
-          if (initialKbId) {
-            setSelectedTableId(initialKbId);
-          } // 初回ロード時
-          else {
-            const firstId = data[0].id;
-            setSelectedTableId(firstId);
-            onKbIdChange(firstId);
-          }
-        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -58,6 +52,24 @@ const FileUploadCard = ({
     };
     fetchCategories();
   }, []);
+
+  // Effect 2: 初期選択の反映 (データ取得後、一度だけ実行)
+  useEffect(() => {
+    // まだデータがない、または既に初期化済みの場合は何もしない
+    if (categories.length === 0 || initializedRef.current) return;
+
+    if (initialKbId) {
+      setSelectedTableId(initialKbId);
+    } else {
+      // 初期IDがない場合は先頭の要素を選択し、親に通知
+      const firstId = categories[0].id;
+      setSelectedTableId(firstId);
+      onKbIdChange(firstId);
+    }
+    
+    // 初期化済みフラグを立てる
+    initializedRef.current = true;
+  }, [categories, initialKbId, onKbIdChange]);
 
   useEffect(() => {
     if (state.success && onUploadSuccess) {
@@ -70,14 +82,15 @@ const FileUploadCard = ({
     onKbIdChange(value);
   };
 
-  if (loading) return <div>Loading categories...</div>;
-  if (categories.length === 0) return <div>ナレッジベースが見つかりません</div>;
+  if (loading) return <div className="p-4 text-sm text-gray-500">Loading categories...</div>;
+  if (categories.length === 0) return <div className="p-4 text-sm text-red-500">ナレッジベースが見つかりません</div>;
+
   return (
-    <div className="border border-dashed rounded-xl border-[#3DA8FF] p-5 w-lg text-center bg-[#EFF8FF]">
-      <p>追加したいナレッジを選択</p>
+    <div className="border border-dashed rounded-xl border-[#3DA8FF] p-4 md:p-5 w-full max-w-lg text-center bg-[#EFF8FF]">
+      <p className="mb-2 text-sm md:text-base">追加したいナレッジを選択</p>
       <div className="mb-6">
         <Select value={selectedTableId} onValueChange={handleSelectChange}>
-          <SelectTrigger>
+          <SelectTrigger className="bg-white">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -91,10 +104,10 @@ const FileUploadCard = ({
       </div>
       <form
         action={formAction}
-        className="flex flex-col gap-4 border p-6 rounded-lg shadow-sm w-full max-w-md"
+        className="flex flex-col gap-4 border p-4 md:p-6 rounded-lg shadow-sm w-full bg-white"
       >
         <input type="hidden" name="datasetId" value={selectedTableId} />
-        <div>
+        <div className="text-left">
           <label className="block mb-2 text-sm font-medium text-gray-700">
             ドキュメントを選択
           </label>
@@ -114,14 +127,14 @@ const FileUploadCard = ({
         <button
           type="submit"
           disabled={!selectedTableId || isPending}
-          className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition disabled:opacity-50"
+          className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition disabled:opacity-50 w-full md:w-auto md:self-center"
         >
-          アップロード開始
+          {isPending ? "アップロード中..." : "アップロード開始"}
         </button>
       </form>
       {state.message && (
         <div
-          className={`p-4 rounded ${
+          className={`mt-4 p-4 rounded text-sm ${
             state.success
               ? "bg-green-100 text-green-700"
               : "bg-red-100 text-red-700"

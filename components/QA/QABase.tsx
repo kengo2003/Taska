@@ -8,10 +8,12 @@ import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
 import Sidebar from "@/components/common/Sidebar";
+import SidebarButton from "@/components/common/SidebarButton";
 import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
 
 import { ChatSession, Message } from "@/types/type";
 import Image from "next/image";
+import Link from "next/link";
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -28,6 +30,20 @@ const formatDate = (date: Date) =>
     .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
 
 export default function QABase() {
+  // サイドバーの開閉状態管理
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+    handleResize();
+  }, []);
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [difyConversationId, setDifyConversationId] = useState<string>("");
@@ -51,7 +67,6 @@ export default function QABase() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // ページ読み込み時に履歴一覧を取得
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -85,8 +100,6 @@ export default function QABase() {
     }
   }, [input]);
 
-  // ハンドラ
-
   const startNewChat = () => {
     setCurrentSessionId(null);
     setDifyConversationId("");
@@ -98,6 +111,7 @@ export default function QABase() {
     ]);
     setSelectedFiles([]);
     setInput("");
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
   const loadSession = async (session: ChatSession) => {
@@ -106,6 +120,7 @@ export default function QABase() {
     setCurrentSessionId(session.id);
     setMessages([]);
     setIsLoading(true);
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
 
     try {
       const res = await fetch(`/api/history/${session.id}`);
@@ -127,18 +142,15 @@ export default function QABase() {
     }
   };
 
-  // 削除機能
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (!confirm("このチャット履歴を削除しますか？\n※S3上のファイルも削除されます")) return;
 
-    // 1. UIから先行して削除
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       startNewChat();
     }
 
-    // 2. サーバーから削除
     try {
       const res = await fetch(`/api/history/${sessionId}`, { method: "DELETE" });
       if (!res.ok) {
@@ -169,12 +181,7 @@ export default function QABase() {
     );
   };
 
-  // ▼▼▼ 修正: 引数 name を削除しました ▼▼▼
-  const handleFileClick = async (
-    e: React.MouseEvent,
-    url: string,
-    // name: string, // ← 削除
-  ) => {
+  const handleFileClick = async (e: React.MouseEvent, url: string) => {
     e.preventDefault();
     if (!url) return;
     try {
@@ -223,7 +230,6 @@ export default function QABase() {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      // userはバックエンドのトークンで上書きされるためダミー
       formData.append("user", "client-user-qa");
       
       if (difyConversationId) {
@@ -293,7 +299,7 @@ export default function QABase() {
 
   return (
     <div className="flex h-screen w-full">
-      <Sidebar>
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
         <ChatSidebarContent
           sessions={sessions}
           currentSessionId={currentSessionId}
@@ -304,7 +310,31 @@ export default function QABase() {
       </Sidebar>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
+        {/* PC用ヘッダー */}
+        <div className="hidden md:block">
+          <Header />
+        </div>
+
+        {/* モバイル用ヘッダー */}
+        <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
+           <div className="flex items-center gap-3">
+             <SidebarButton 
+               isOpen={isSidebarOpen} 
+               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+             />
+             <Link href={"/"}>
+               <div className="relative w-24 h-8">
+                 <Image
+                   src="/TaskaLogo.png"
+                   alt="Logo"
+                   fill
+                   className="object-contain"
+                   unoptimized
+                 />
+               </div>
+             </Link>
+           </div>
+        </div>
 
         <main className="flex-1 flex overflow-hidden relative bg-white">
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
@@ -318,6 +348,7 @@ export default function QABase() {
                 </p>
               </div>
 
+              {/* メッセージリスト等は既存のまま */}
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {messages.map((msg, idx) => (
                   <div
@@ -342,6 +373,7 @@ export default function QABase() {
                           : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
                       }`}
                     >
+                       {/* 画像表示ロジック等は変更なし */}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {msg.attachments.map((att, i) =>
@@ -368,7 +400,6 @@ export default function QABase() {
                               <a
                                 key={i}
                                 href="#"
-                                // ▼▼▼ 修正: att.name を削除しました ▼▼▼
                                 onClick={(e) =>
                                   handleFileClick(e, att.url)
                                 }
@@ -427,7 +458,7 @@ export default function QABase() {
                     </div>
                   </div>
                 ))}
-
+                
                 {isLoading && (
                   <div className="flex justify-start items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
@@ -475,7 +506,7 @@ export default function QABase() {
                     onClick={handleUploadClick}
                     className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full"
                   >
-                    {selectedFiles.length > 0 ? (
+                     {selectedFiles.length > 0 ? (
                       <div className="relative">
                         <Upload className="w-5 h-5 text-blue-500" />
                         <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">

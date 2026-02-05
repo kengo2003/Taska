@@ -34,16 +34,6 @@ export default function LoginBase() {
       if (!loginRes.ok) {
         throw new Error(data?.error ?? "IDまたはパスワードが間違っています");
       }
-
-      // const groups = data.groups ?? [];
-
-      // if (groups.includes("Teachers")) {
-      //   router.push("/teacher");
-      // } else if (groups.includes("Students")) {
-      //   router.push("/student");
-      // } else {
-      //   router.push("/");
-      // }
       router.push("/");
     } catch (error) {
       console.error("Login failed:", error);
@@ -58,20 +48,20 @@ export default function LoginBase() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3]">
-      <div className="mb-12 relative w-64 h-20">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3] p-4">
+      <div className="mb-8 md:mb-12 relative w-full max-w-[350px] h-16 md:h-20 flex justify-center">
         <Image
           src="/TaskaLogo.png"
           alt="Taska Logo"
           width={350}
           height={150}
-          className="object-contain"
+          className="object-contain w-auto h-full"
           priority
           unoptimized 
         />
       </div>
 
-      <form onSubmit={handleLogin} className="w-full max-w-sm px-8">
+      <form onSubmit={handleLogin} className="w-full max-w-sm px-4 md:px-8">
         <LoginInput
           id="email"
           type="email"
