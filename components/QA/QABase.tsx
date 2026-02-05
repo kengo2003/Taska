@@ -142,27 +142,6 @@ export default function QABase() {
     }
   };
 
-  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    if (!confirm("このチャット履歴を削除しますか？\n※S3上のファイルも削除されます")) return;
-
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    if (currentSessionId === sessionId) {
-      startNewChat();
-    }
-
-    try {
-      const res = await fetch(`/api/history/${sessionId}`, { method: "DELETE" });
-      if (!res.ok) {
-        throw new Error("Failed to delete session");
-      }
-      console.log("Deleted:", sessionId);
-    } catch (error) {
-      console.error("Delete Error:", error);
-      alert("削除に失敗しました（画面上は削除されました）");
-    }
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
@@ -305,7 +284,6 @@ export default function QABase() {
           currentSessionId={currentSessionId}
           onNewChat={startNewChat}
           onSelectSession={loadSession}
-          onDeleteSession={deleteSession}
         />
       </Sidebar>
 

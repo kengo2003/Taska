@@ -197,29 +197,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
-  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    if (!confirm("このチャット履歴を削除しますか？\n※S3上のファイルも削除されます")) return;
-
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    if (currentSessionId === sessionId) {
-      startNewChat();
-    }
-
-    try {
-      const res = await fetch(`/api/history/${sessionId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        throw new Error("削除に失敗しました");
-      }
-      console.log("削除完了:", sessionId);
-    } catch (error) {
-      console.error("削除エラー:", error);
-      alert("サーバー上の削除に失敗しました（画面上は削除されました）");
-    }
-  };
-
   const handleTemplateClick = (prompt: string) => {
     setInput(prompt);
     textareaRef.current?.focus();
@@ -403,7 +380,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
           currentSessionId={currentSessionId}
           onNewChat={startNewChat}
           onSelectSession={loadSession}
-          onDeleteSession={deleteSession}
         />
       </Sidebar>
 

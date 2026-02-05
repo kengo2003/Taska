@@ -4,53 +4,59 @@ import React from "react";
 import SidebarButton from "./SidebarButton";
 
 type Props = {
-  children: React.ReactNode;
   isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
+  setIsOpen: (isOpen: boolean) => void;
+  children: React.ReactNode;
 };
 
-const Sidebar = ({ children, isOpen, setIsOpen }: Props) => {
+const Sidebar = ({ isOpen, setIsOpen, children }: Props) => {
   return (
     <>
-      {/* 【モバイル用】サイドバーが開いている時の背景オーバーレイ */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden animate-in fade-in duration-200"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* ▼▼▼ モバイル用オーバーレイ (背景の黒味) ▼▼▼ */}
+      {/* モバイル(md未満)で、isOpenがtrueの時だけ表示 */}
+      <div
+        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden ${
+          isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
+        }`}
+        onClick={() => setIsOpen(false)} // 背景クリックで閉じる
+      />
 
+      {/* ▼▼▼ サイドバー本体 ▼▼▼ */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 h-screen flex flex-col border-r border-gray-200 bg-linear-to-b from-[#F5F5F5] to-[#94BBD9] transition-all duration-300 ease-in-out shrink-0
+          /* 共通設定 */
+          bg-gradient-to-b from-[#F5F5F5] to-[#94BBD9] border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out h-screen z-50
           
-          /* モバイル (md未満): 閉時は画面外、開時は表示 */
-          ${isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"}
+          /* モバイル設定 (fixedで浮遊) */
+          fixed top-0 left-0 bottom-0 shadow-xl
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          w-64
 
-          /* PC (md以上): 常に表示、閉時は幅縮小 */
-          md:relative md:translate-x-0
-          ${isOpen ? "md:w-64" : "md:w-16"}
+          /* PC設定 (md以上で sticky/relative に戻す) */
+          md:translate-x-0 md:static md:shadow-none md:sticky md:top-0
+          md:${isOpen ? "w-64" : "w-16"}
         `}
       >
-        {/* PCでのみ表示する内部トグルボタン */}
-        <div
-          className={`p-4 hidden md:flex ${isOpen ? "justify-start" : "justify-center"}`}
-        >
+        {/* PC用ハンバーガーボタン (モバイルでは非表示) */}
+        <div className="hidden md:flex h-16 items-center justify-start pl-4 shrink-0">
           <SidebarButton onClick={() => setIsOpen(!isOpen)} isOpen={isOpen} />
         </div>
 
-        {/* モバイルでサイドバーが開いている時の「閉じる」用ボタン */}
-        <div className="md:hidden p-4 flex justify-end">
-           <SidebarButton onClick={() => setIsOpen(false)} isOpen={true} />
+        {/* モバイル用閉じるボタン (必要ならヘッダーと同じ高さに配置) */}
+        <div className="md:hidden flex h-16 items-center justify-end px-4 border-b border-gray-200/50">
+           {/* モバイルでサイドバー内のボタンから閉じたければここに追加 */}
         </div>
 
-        {/* コンテンツエリア: 閉じている時は完全に隠す */}
         <div
-          className={`flex-1 overflow-y-auto overflow-x-hidden transition-opacity duration-200
-            ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}
-          `}
+          className={`flex-1 overflow-y-auto overflow-x-hidden transition-opacity duration-200 ${
+            // モバイルなら常に中身表示、PCなら開閉に合わせてフェード
+            "opacity-100 visible"
+          } md:${isOpen ? "opacity-100 visible" : "opacity-0 invisible w-0"}`}
         >
-          {children}
+          {/* 中身 */}
+          <div className="block">
+            {children}
+          </div>
         </div>
       </aside>
     </>
