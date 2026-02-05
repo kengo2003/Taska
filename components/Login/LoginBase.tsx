@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginInput } from "@/components/Login/LoginInput";
 import { LoginButton } from "@/components/Login/LoginButton";
@@ -34,15 +35,16 @@ export default function LoginBase() {
         throw new Error(data?.error ?? "IDまたはパスワードが間違っています");
       }
 
-      const groups = data.groups ?? [];
+      // const groups = data.groups ?? [];
 
-      if (groups.includes("Teachers")) {
-        router.push("/teacher");
-      } else if (groups.includes("Students")) {
-        router.push("/student");
-      } else {
-        router.push("/");
-      }
+      // if (groups.includes("Teachers")) {
+      //   router.push("/teacher");
+      // } else if (groups.includes("Students")) {
+      //   router.push("/student");
+      // } else {
+      //   router.push("/");
+      // }
+      router.push("/");
     } catch (error) {
       console.error("Login failed:", error);
       alert(
@@ -65,7 +67,7 @@ export default function LoginBase() {
           height={150}
           className="object-contain"
           priority
-          unoptimized
+          unoptimized 
         />
       </div>
 
@@ -87,8 +89,17 @@ export default function LoginBase() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="xxxxxxxx"
-          className="mb-10"
+          className="mb-2"
         />
+
+        <div className="flex justify-end w-full mb-8">
+          <Link 
+            href="/api/auth/forgot-password" 
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            パスワードを忘れた場合
+          </Link>
+        </div>
 
         <LoginButton isLoading={isLoading} />
       </form>
