@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         AuthParameters: {
           USERNAME: email,
           PASSWORD: password,
-          SECRET_HASH: secretHash,
+          //SECRET_HASH: secretHash,
         },
       }),
     );
