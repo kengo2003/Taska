@@ -20,6 +20,7 @@ const LogoutButton = () => {
         width={40}
         height={40}
         className="w-6 h-6 cursor-pointer hover:opacity-70"
+        unoptimized
       />
     </button>
   );

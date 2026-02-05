@@ -65,6 +65,7 @@ export default function LoginBase() {
           height={150}
           className="object-contain"
           priority
+          unoptimized
         />
       </div>
 

@@ -10,6 +10,7 @@ const HomeHeader = () => {
           fill
           className="object-contain"
           priority
+          unoptimized
         />
       </div>
     </header>
