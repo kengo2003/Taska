@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     // Cookie設定
     response.cookies.set(cookieName, accessToken, {
       httpOnly: true,
-      secure: false, // false ならlocalhostでも保存されます
+      secure: false, // httpsならsecureCookie
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60,
