@@ -14,6 +14,7 @@ import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
 import { ChatSession, Message } from "@/types/type";
 import Image from "next/image";
 import Link from "next/link";
+import FeedbackButtons from "@/components/Chat/FeedbackButtons";
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -32,7 +33,7 @@ const formatDate = (date: Date) =>
 export default function QABase() {
   // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -210,7 +211,7 @@ export default function QABase() {
       const formData = new FormData();
       formData.append("query", messageToSend);
       formData.append("user", "client-user-qa");
-      
+
       if (difyConversationId) {
         formData.append("dify_conversation_id", difyConversationId);
       }
@@ -253,7 +254,7 @@ export default function QABase() {
           difyConversationId: serverDifyId,
         };
         setSessions([newSession, ...sessions]);
-      } 
+      }
 
     } catch (error) {
       console.error("Chat Error:", error);
@@ -295,23 +296,23 @@ export default function QABase() {
 
         {/* モバイル用ヘッダー */}
         <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
-           <div className="flex items-center gap-3">
-             <SidebarButton 
-               isOpen={isSidebarOpen} 
-               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             />
-             <Link href={"/"}>
-               <div className="relative w-24 h-8">
-                 <Image
-                   src="/TaskaLogo.png"
-                   alt="Logo"
-                   fill
-                   className="object-contain"
-                   unoptimized
-                 />
-               </div>
-             </Link>
-           </div>
+          <div className="flex items-center gap-3">
+            <SidebarButton
+              isOpen={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+            <Link href={"/"}>
+              <div className="relative w-24 h-8">
+                <Image
+                  src="/TaskaLogo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </Link>
+          </div>
         </div>
 
         <main className="flex-1 flex overflow-hidden relative bg-white">
@@ -331,11 +332,10 @@ export default function QABase() {
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${
-                      msg.role === "user"
+                    className={`flex ${msg.role === "user"
                         ? "justify-end"
                         : "justify-start items-start gap-3"
-                    }`}
+                      }`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-green-100 border border-green-200">
@@ -345,13 +345,12 @@ export default function QABase() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                        msg.role === "user"
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
                           ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
                           : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                      }`}
+                        }`}
                     >
-                       {/* 画像表示ロジック等は変更なし */}
+                      {/* 画像表示ロジック等は変更なし */}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {msg.attachments.map((att, i) =>
@@ -433,10 +432,16 @@ export default function QABase() {
                           {msg.content}
                         </ReactMarkdown>
                       </div>
+                      {msg.role === "assistant" && (
+                        <FeedbackButtons
+                          messageId={`${currentSessionId || "temp"}-${idx}`}
+                          responseContent={msg.content}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && (
                   <div className="flex justify-start items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
@@ -484,7 +489,7 @@ export default function QABase() {
                     onClick={handleUploadClick}
                     className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full"
                   >
-                     {selectedFiles.length > 0 ? (
+                    {selectedFiles.length > 0 ? (
                       <div className="relative">
                         <Upload className="w-5 h-5 text-blue-500" />
                         <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
