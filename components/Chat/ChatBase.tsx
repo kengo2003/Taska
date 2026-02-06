@@ -26,6 +26,7 @@ import {
   CRITIQUE_TEMPLATES,
 } from "@/Templates/data";
 import Title from "../common/Title";
+import FeedbackButtons from "./FeedbackButtons";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
@@ -51,7 +52,7 @@ interface ChatBaseProps {
 export default function ChatBase({ mode }: ChatBaseProps) {
   // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // 画面サイズに応じて初期状態を設定
   useEffect(() => {
     const handleResize = () => {
@@ -152,7 +153,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     ]);
     setSelectedFiles([]);
     setInput("");
-    
+
     // モバイルの場合は新規チャット開始時にサイドバーを閉じる
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -167,7 +168,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       session.messages && session.messages.length > 0 ? session.messages : [],
     );
     setIsLoading(true);
-    
+
     // モバイルの場合はセッション選択時にサイドバーを閉じる
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -391,23 +392,23 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
         {/* モバイル用ヘッダー (md未満で表示) */}
         <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
-           <div className="flex items-center gap-3">
-             <SidebarButton 
-               isOpen={isSidebarOpen} 
-               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             />
-             <Link href={"/"}>
-               <div className="relative w-24 h-8">
-                 <Image
-                   src="/TaskaLogo.png"
-                   alt="Logo"
-                   fill
-                   className="object-contain"
-                   unoptimized
-                 />
-               </div>
-             </Link>
-           </div>
+          <div className="flex items-center gap-3">
+            <SidebarButton
+              isOpen={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+            <Link href={"/"}>
+              <div className="relative w-24 h-8">
+                <Image
+                  src="/TaskaLogo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </Link>
+          </div>
         </div>
 
         <main className="flex-1 flex overflow-hidden relative bg-white">
@@ -419,31 +420,28 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "analysis"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "analysis"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     自己分析
                   </Link>
                   <Link
                     href="/chat/create"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "create"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "create"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     履歴書作成
                   </Link>
                   <Link
                     href="/chat/critique"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "critique"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "critique"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     履歴書添削
                   </Link>
@@ -455,11 +453,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${
-                      msg.role === "user"
-                        ? "justify-end"
-                        : "justify-start items-start gap-3"
-                    }`}
+                    className={`flex ${msg.role === "user"
+                      ? "justify-end"
+                      : "justify-start items-start gap-3"
+                      }`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-blue-100 border border-blue-200">
@@ -469,11 +466,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                      }`}
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
+                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                        }`}
                     >
                       {/* メッセージ内容の表示ロジックは既存のまま */}
                       {msg.attachments && msg.attachments.length > 0 && (
@@ -529,12 +525,24 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                           {msg.content}
                         </ReactMarkdown>
                       </div>
+
+                      {msg.role === "assistant" && (
+                        <FeedbackButtons
+                          messageId={`${currentSessionId || "temp"}-${idx}`}
+                          responseContent={msg.content}
+                          userPrompt={
+                            idx > 0 && messages[idx - 1].role === "user"
+                              ? messages[idx - 1].content
+                              : ""
+                          }
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && (
-                   <div className="flex justify-start items-center gap-3">
+                  <div className="flex justify-start items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
                     <div className="text-gray-400 text-sm">
                       Taskaが入力中...
@@ -547,8 +555,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
               {/* 入力エリア */}
               <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
                 <div className="mb-3">
-                   {/* テンプレート表示トグル */}
-                   <div className="flex justify-between items-center mb-2 px-1">
+                  {/* テンプレート表示トグル */}
+                  <div className="flex justify-between items-center mb-2 px-1">
                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-yellow-500" />
                       おすすめの質問（{getCurrentTitle()}）
