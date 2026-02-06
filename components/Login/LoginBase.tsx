@@ -13,14 +13,16 @@ export default function LoginBase() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(""); 
 
     try {
       if (!email.endsWith("@hcs.ac.jp")) {
-        throw new Error("学校のメールアドレス（@hcs.ac.jp）を入力してください");
+        throw new Error("学校のメールアドレス(@hcs.ac.jp)を入力してください");
       }
 
       const loginRes = await fetch("/api/auth/login", {
@@ -32,16 +34,27 @@ export default function LoginBase() {
       const data = await loginRes.json().catch(() => null);
 
       if (!loginRes.ok) {
-        throw new Error(data?.error ?? "IDまたはパスワードが間違っています");
+        // ▼ ここでエラーメッセージを変換しています
+        let errorMsg = data?.error;
+        
+        if (errorMsg === "auth_failed" || errorMsg === "NotAuthorizedException") {
+          errorMsg = "メールアドレスまたはパスワードが間違っています";
+        } else if (errorMsg === "UserNotFoundException") {
+          errorMsg = "アカウントが見つかりません";
+        }
+
+        throw new Error(errorMsg ?? "IDまたはパスワードが間違っています");
       }
+
+      // ログイン成功時はトップへ
       router.push("/");
+
     } catch (error) {
       console.error("Login failed:", error);
-      alert(
-        "ログインに失敗しました\n" +
-          (error instanceof Error
-            ? error.message
-            : "IDまたはパスワードを確認してください"),
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "IDまたはパスワードを確認してください"
       );
       setIsLoading(false);
     }
@@ -82,14 +95,20 @@ export default function LoginBase() {
           className="mb-2"
         />
 
-        <div className="flex justify-end w-full mb-8">
+        <div className="flex justify-end w-full mb-4">
           <Link 
-            href="/api/auth/forgot-password" 
+            href="/auth/forgot-password" 
             className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
           >
             パスワードを忘れた場合
           </Link>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded relative" role="alert">
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
 
         <LoginButton isLoading={isLoading} />
       </form>
