@@ -333,8 +333,8 @@ export default function QABase() {
                   <div
                     key={idx}
                     className={`flex ${msg.role === "user"
-                        ? "justify-end"
-                        : "justify-start items-start gap-3"
+                      ? "justify-end"
+                      : "justify-start items-start gap-3"
                       }`}
                   >
                     {msg.role === "assistant" && (
@@ -346,8 +346,8 @@ export default function QABase() {
                     )}
                     <div
                       className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
                         }`}
                     >
                       {/* 画像表示ロジック等は変更なし */}
@@ -436,6 +436,11 @@ export default function QABase() {
                         <FeedbackButtons
                           messageId={`${currentSessionId || "temp"}-${idx}`}
                           responseContent={msg.content}
+                          userPrompt={
+                            idx > 0 && messages[idx - 1].role === "user"
+                              ? messages[idx - 1].content
+                              : ""
+                          }
                         />
                       )}
                     </div>

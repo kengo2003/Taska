@@ -7,11 +7,16 @@ import { ThumbsUp, ThumbsDown } from "lucide-react";
 type VoteType = "good" | "bad" | null;
 
 type FeedbackButtonsProps = {
-  messageId: string;
-  responseContent: string;
+  messageId: string;      // AIのメッセージを一意に特定するID
+  responseContent: string; // 評価対象のAI回答テキスト
+  userPrompt: string;     // ★この回答を引き出したユーザーの質問文
 };
 
-export default function FeedbackButtons({ messageId, responseContent }: FeedbackButtonsProps) {
+export default function FeedbackButtons({ 
+  messageId, 
+  responseContent,
+  userPrompt
+}: FeedbackButtonsProps) {
   const [currentVote, setCurrentVote] = useState<VoteType>(null);
   const [isSending, setIsSending] = useState(false);
 
@@ -37,13 +42,15 @@ export default function FeedbackButtons({ messageId, responseContent }: Feedback
           messageId,
           vote: nextVote, // nullを送ることで「取り消し」としてログに残す
           content: responseContent,
+          userPrompt: userPrompt, // ★質問と回答をセットで保存
           timestamp: new Date().toISOString(),
         }),
       });
     } catch (error) {
       console.error("Feedback failed:", error);
       alert("評価の送信に失敗しました");
-      setCurrentVote(prevVote); // エラー時は見た目を戻す
+      // エラー時は見た目を元に戻す
+      setCurrentVote(prevVote);
     } finally {
       setIsSending(false);
     }
@@ -84,7 +91,7 @@ export default function FeedbackButtons({ messageId, responseContent }: Feedback
       </button>
 
       {/* 状態テキスト（誤操作した人が「あ、取り消せた」と分かるように） */}
-      <span className="text-[10px] text-gray-300 ml-1 transition-opacity duration-300">
+      <span className="text-[10px] text-gray-400 ml-1 transition-opacity duration-300">
         {currentVote === "good" && "高評価済み"}
         {currentVote === "bad" && "低評価済み"}
       </span>

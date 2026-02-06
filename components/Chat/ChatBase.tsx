@@ -421,8 +421,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   <Link
                     href="/chat/analysis"
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "analysis"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                   >
                     自己分析
@@ -430,8 +430,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   <Link
                     href="/chat/create"
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "create"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                   >
                     履歴書作成
@@ -439,8 +439,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   <Link
                     href="/chat/critique"
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "critique"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                   >
                     履歴書添削
@@ -454,8 +454,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   <div
                     key={idx}
                     className={`flex ${msg.role === "user"
-                        ? "justify-end"
-                        : "justify-start items-start gap-3"
+                      ? "justify-end"
+                      : "justify-start items-start gap-3"
                       }`}
                   >
                     {msg.role === "assistant" && (
@@ -467,8 +467,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                     )}
                     <div
                       className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
                         }`}
                     >
                       {/* メッセージ内容の表示ロジックは既存のまま */}
@@ -530,6 +530,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         <FeedbackButtons
                           messageId={`${currentSessionId || "temp"}-${idx}`}
                           responseContent={msg.content}
+                          userPrompt={
+                            idx > 0 && messages[idx - 1].role === "user"
+                              ? messages[idx - 1].content
+                              : ""
+                          }
                         />
                       )}
                     </div>
