@@ -1,11 +1,9 @@
 "use client";
 
-import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu } from "lucide-react"; // ハンバーガーアイコン
+import { Menu } from "lucide-react";
 
-// Props定義を追加
 type HeaderProps = {
   isOpen?: boolean;
   setIsOpen?: (isOpen: boolean) => void;
@@ -13,11 +11,8 @@ type HeaderProps = {
 
 const Header = ({ isOpen, setIsOpen }: HeaderProps) => {
   return (
-    <div className="h-16 bg-gradient-to-r from-[#F5F5F5] to-[#94BBD9] flex items-center justify-between px-4 border-b border-gray-200 shrink-0 sticky top-0 z-20">
-      
+    <div className="h-16 bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] flex items-center justify-between px-4 border-b border-gray-200 shrink-0 sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        {/* ▼▼▼ モバイル用ハンバーガーボタン ▼▼▼ */}
-        {/* md:hidden でPCでは隠す。setIsOpenがある時だけ表示 */}
         <div className="md:hidden">
           {setIsOpen && (
             <button
@@ -41,8 +36,7 @@ const Header = ({ isOpen, setIsOpen }: HeaderProps) => {
         </Link>
       </div>
 
-      {/* 右側の要素があればここに (ユーザーアイコンなど) */}
-      <div className="w-8 h-8" /> 
+      <div className="w-8 h-8" />
     </div>
   );
 };
