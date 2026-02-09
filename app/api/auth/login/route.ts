@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     if (accessToken) {
       response.cookies.set(accessCookieName, accessToken, {
         httpOnly: true,
-        secure: secureCookie,
+        secure: secureCookie, // httpならfalse
         sameSite: "lax",
         path: "/",
         maxAge: expiresIn,
