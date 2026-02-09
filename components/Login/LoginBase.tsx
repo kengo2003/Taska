@@ -97,7 +97,7 @@ export default function LoginBase() {
 
         <div className="flex justify-end w-full mb-4">
           <Link 
-            href="/auth/forgot-password" 
+            href="api/auth/forgot-password" 
             className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
           >
             パスワードを忘れた場合

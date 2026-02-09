@@ -36,22 +36,30 @@ export type UploadState = {
   data?: JSON;
 };
 
+// ★修正: メッセージの添付ファイル型を定義
+export type MessageAttachment = {
+  name: string;
+  url: string;
+  type: "image" | "file";
+};
+
+// ★修正: route.tsで使用されている LocalAttachment をエイリアスとして定義
+export type LocalAttachment = MessageAttachment;
+
 export type Message = {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system"; // systemを追加
   content: string;
-  attachments?: {
-    name: string;
-    url: string;
-    type: "image" | "file";
-  }[];
+  date?: string; // ★追加: メッセージごとの送信日時 (例: "2025/02/06 12:30")
+  attachments?: MessageAttachment[];
 };
 
 export type ChatSession = {
   id: string;
   title: string;
-  date: string;
+  date: string; // セッションの最終更新日時
+  email?: string; // ★追加: 利用者のメールアドレス
   messages: Message[];
-  difyConversationId: string;
+  difyConversationId?: string; // 互換性のためオプショナル推奨
   type?: "qa" | "resume";
 };
 
@@ -62,9 +70,10 @@ export interface MenuButtonProps {
 }
 
 export interface DifyFile {
-  type: "image" | "document";
+  type: "image" | "document" | "video" | "audio";
   transfer_method: "local_file" | "remote_url";
-  upload_file_id: string;
+  upload_file_id?: string;
+  url?: string;
 }
 
 export interface UploadResponse {
@@ -84,10 +93,4 @@ export interface ChatPayload {
   user: string;
   conversation_id?: string;
   files?: DifyFile[];
-}
-
-export interface LocalAttachment {
-  name: string;
-  type: "image" | "file";
-  url: string;
 }
