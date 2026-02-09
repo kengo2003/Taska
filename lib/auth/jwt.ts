@@ -13,6 +13,7 @@ export type CognitoClaims = JWTPayload & {
   "cognito:groups"?: string[];
   token_use?: "id" | "access";
   client_id?: string;
+  aud?: string;
 };
 
 export async function verifyAccessToken(token: string): Promise<CognitoClaims> {
@@ -28,5 +29,17 @@ export async function verifyAccessToken(token: string): Promise<CognitoClaims> {
     throw new Error("Invalid client_id");
   }
 
+  return payload as CognitoClaims;
+}
+
+export async function verifyIdToken(token: string): Promise<CognitoClaims> {
+  const { payload } = await jwtVerify(token, jwks, { issuer });
+
+  if (payload.token_use !== "id") {
+    throw new Error("Invalid token_use. Expected id token.");
+  }
+  if (payload.aud !== clientId) {
+    throw new Error("Invalid aud");
+  }
   return payload as CognitoClaims;
 }
