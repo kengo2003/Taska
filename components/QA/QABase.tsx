@@ -26,15 +26,12 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 export default function QABase() {
-  // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // ★修正: 画面サイズ監視のロジック改善
   useEffect(() => {
     const checkMobile = () => window.innerWidth < 768;
 
-    // 初期化時の設定
     const initialMobile = checkMobile();
     setIsMobile(initialMobile);
     if (!initialMobile) {
@@ -49,7 +46,6 @@ export default function QABase() {
       const currentIsMobile = checkMobile();
       setIsMobile(currentIsMobile);
 
-      // モバイル⇄PCの状態が切り替わった時だけ処理
       if (currentIsMobile !== prevIsMobile) {
         if (!currentIsMobile) {
           setIsSidebarOpen(true);
@@ -97,7 +93,6 @@ export default function QABase() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          
           if (data.length > historyLimit) {
             setHasMoreHistory(true);
             setSessions(data.slice(0, historyLimit));
@@ -282,7 +277,6 @@ export default function QABase() {
       if (!currentSessionId) {
         fetchHistory(); // 最新履歴を再取得
       }
-
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
@@ -356,25 +350,54 @@ export default function QABase() {
 
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start items-start gap-3"}`}>
+                  <div
+                    key={idx}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start items-start gap-3"}`}
+                  >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-green-100 border border-green-200">
-                        <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">Q</div>
+                        <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">
+                          Q
+                        </div>
                       </div>
                     )}
-                    <div className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user" ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none" : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"}`}>
+                    <div
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user" ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none" : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"}`}
+                    >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {msg.attachments.map((att, i) =>
                             att.type === "image" ? (
-                              <div key={i} className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 w-fit cursor-pointer hover:opacity-90 transition-opacity" onClick={(e) => { e.stopPropagation(); setZoomedImage(att.url); }}>
-                                <Image src={att.url || "/placeholder.png"} alt="preview" width={500} height={500} sizes="120px" className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain" unoptimized />
+                              <div
+                                key={i}
+                                className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 w-fit cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setZoomedImage(att.url);
+                                }}
+                              >
+                                <Image
+                                  src={att.url || "/placeholder.png"}
+                                  alt="preview"
+                                  width={500}
+                                  height={500}
+                                  sizes="120px"
+                                  className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain"
+                                  unoptimized
+                                />
                               </div>
                             ) : (
-                              <a key={i} href="#" onClick={(e) => handleFileClick(e, att.url)} className="block hover:opacity-80 transition-opacity cursor-pointer">
+                              <a
+                                key={i}
+                                href="#"
+                                onClick={(e) => handleFileClick(e, att.url)}
+                                className="block hover:opacity-80 transition-opacity cursor-pointer"
+                              >
                                 <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
                                   <div className="w-5 h-5 text-blue-500 shrink-0" />
-                                  <span className="font-medium text-gray-700 text-xs truncate">{att.name}</span>
+                                  <span className="font-medium text-gray-700 text-xs truncate">
+                                    {att.name}
+                                  </span>
                                 </div>
                               </a>
                             ),
@@ -382,10 +405,53 @@ export default function QABase() {
                         </div>
                       )}
                       <div className="prose prose-sm max-w-none text-gray-800 wrap-break-word [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ a: ({ ...props }) => (<a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />), p: ({ ...props }) => (<p {...props} className="mb-2 last:mb-0" />), img: ({ ...props }) => (<span className="inline-block cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setZoomedImage(String(props.src))}><Image src={String(props.src)} alt={props.alt || "image"} width={500} height={500} sizes="240px" className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2" unoptimized /></span>), }}>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          components={{
+                            a: ({ ...props }) => (
+                              <a
+                                {...props}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              />
+                            ),
+                            p: ({ ...props }) => (
+                              <p {...props} className="mb-2 last:mb-0" />
+                            ),
+                            img: ({ ...props }) => (
+                              <span
+                                className="inline-block cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() =>
+                                  setZoomedImage(String(props.src))
+                                }
+                              >
+                                <Image
+                                  src={String(props.src)}
+                                  alt={props.alt || "image"}
+                                  width={500}
+                                  height={500}
+                                  sizes="240px"
+                                  className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
+                                  unoptimized
+                                />
+                              </span>
+                            ),
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
                       </div>
                       {msg.role === "assistant" && (
-                        <FeedbackButtons messageId={`${currentSessionId || "temp"}-${idx}`} responseContent={msg.content} userPrompt={idx > 0 && messages[idx - 1].role === "user" ? messages[idx - 1].content : ""} />
+                        <FeedbackButtons
+                          messageId={`${currentSessionId || "temp"}-${idx}`}
+                          responseContent={msg.content}
+                          userPrompt={
+                            idx > 0 && messages[idx - 1].role === "user"
+                              ? messages[idx - 1].content
+                              : ""
+                          }
+                        />
                       )}
                     </div>
                   </div>
@@ -400,32 +466,77 @@ export default function QABase() {
               </div>
 
               <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
-                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" multiple accept=".pdf,.doc,.docx,image/*" />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.doc,.docx,image/*"
+                />
                 {selectedFiles.length > 0 && (
                   <div className="mb-2 flex flex-wrap gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7">
+                      <div
+                        key={index}
+                        className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7"
+                      >
                         <div className="w-3 h-3 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">{file.name}</span>
-                        <button onClick={() => removeFile(index)} className="absolute top-1/2 -translate-y-1/2 right-1 hover:bg-gray-100 rounded-full p-0.5 transition-colors"><X className="w-3 h-3 text-gray-500" /></button>
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="absolute top-1/2 -translate-y-1/2 right-1 hover:bg-gray-100 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="w-3 h-3 text-gray-500" />
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="relative flex items-end group">
-                  <div onClick={handleUploadClick} className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full">
+                  <div
+                    onClick={handleUploadClick}
+                    className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full"
+                  >
                     {selectedFiles.length > 0 ? (
-                      <div className="relative"><Upload className="w-5 h-5 text-blue-500" /><span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">{selectedFiles.length}</span></div>
+                      <div className="relative">
+                        <Upload className="w-5 h-5 text-blue-500" />
+                        <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
+                          {selectedFiles.length}
+                        </span>
+                      </div>
                     ) : (
                       <Upload className="w-5 h-5" />
                     )}
                   </div>
-                  <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="ここに質問を入力..." disabled={isLoading} rows={1} className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed" />
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="ここに質問を入力..."
+                    disabled={isLoading}
+                    rows={1}
+                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed"
+                  />
                   <div className="absolute right-4 bottom-4 flex items-center gap-2">
                     {input || selectedFiles.length > 0 ? (
-                      <button onClick={handleSend} disabled={isLoading} className="text-blue-600 hover:text-blue-700"><Send className="w-5 h-5" /></button>
+                      <button
+                        onClick={handleSend}
+                        disabled={isLoading}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
                     ) : (
-                      <button onClick={() => setInput("")} className={`text-gray-400 ${!input && "hidden"}`}><X className="w-5 h-5" /></button>
+                      <button
+                        onClick={() => setInput("")}
+                        className={`text-gray-400 ${!input && "hidden"}`}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -435,10 +546,24 @@ export default function QABase() {
         </main>
       </div>
       {zoomedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-200"
+          onClick={() => setZoomedImage(null)}
+        >
           <div className="relative w-full max-w-5xl h-[85vh]">
-            <Image src={zoomedImage} alt="Zoomed" fill className="object-contain" unoptimized />
-            <button className="absolute -top-4 -right-4 md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50" onClick={() => setZoomedImage(null)}><X className="w-6 h-6" /></button>
+            <Image
+              src={zoomedImage}
+              alt="Zoomed"
+              fill
+              className="object-contain"
+              unoptimized
+            />
+            <button
+              className="absolute -top-4 -right-4 md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50"
+              onClick={() => setZoomedImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}

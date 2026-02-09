@@ -34,7 +34,7 @@ const FileUploadCard = ({
   const [selectedTableId, setSelectedTableId] = useState<string>(initialKbId);
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // 初期化が完了したかを追跡するRef
   const initializedRef = useRef(false);
 
@@ -66,7 +66,7 @@ const FileUploadCard = ({
       setSelectedTableId(firstId);
       onKbIdChange(firstId);
     }
-    
+
     // 初期化済みフラグを立てる
     initializedRef.current = true;
   }, [categories, initialKbId, onKbIdChange]);
@@ -82,8 +82,16 @@ const FileUploadCard = ({
     onKbIdChange(value);
   };
 
-  if (loading) return <div className="p-4 text-sm text-gray-500">Loading categories...</div>;
-  if (categories.length === 0) return <div className="p-4 text-sm text-red-500">ナレッジベースが見つかりません</div>;
+  if (loading)
+    return (
+      <div className="p-4 text-sm text-gray-500">Loading categories...</div>
+    );
+  if (categories.length === 0)
+    return (
+      <div className="p-4 text-sm text-red-500">
+        ナレッジベースが見つかりません
+      </div>
+    );
 
   return (
     <div className="border border-dashed rounded-xl border-[#3DA8FF] p-4 md:p-5 w-full max-w-lg text-center bg-[#EFF8FF]">
