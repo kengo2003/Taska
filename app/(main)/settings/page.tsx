@@ -12,7 +12,7 @@ export default function SettingsPage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +56,6 @@ export default function SettingsPage() {
   return (
     // サイドバーを削除し、縦方向のカラムレイアウトに変更
     <div className="flex flex-col h-screen w-full bg-gray-50">
-      
       {/* PC用ヘッダー (md以上で表示) */}
       <div className="hidden md:block">
         <Header />
@@ -83,18 +82,17 @@ export default function SettingsPage() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-2xl mx-auto">
-          
           {/* 「ホームに戻る」リンクエリア */}
           <div className="mb-6">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all group"
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               <span className="font-medium text-sm">ホームに戻る</span>
             </Link>
           </div>
-          
+
           <div className="mb-8 px-1">
             <Title text="パスワード変更" />
             <p className="text-sm text-gray-500 mt-2">
@@ -104,7 +102,6 @@ export default function SettingsPage() {
 
           <div className="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-gray-100">
             <form onSubmit={handleSubmit} className="space-y-6">
-              
               {error && (
                 <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-100 flex items-start gap-2 animate-in fade-in">
                   <span className="font-bold shrink-0">Error:</span>
@@ -121,7 +118,7 @@ export default function SettingsPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                     <Lock className="w-4 h-4 text-gray-400" />
                     現在のパスワード
                   </label>
@@ -136,7 +133,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                     <Lock className="w-4 h-4 text-gray-400" />
                     新しいパスワード
                   </label>
@@ -155,7 +152,7 @@ export default function SettingsPage() {
 
                 {/* 確認用パスワード入力欄 */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-gray-400" />
                     新しいパスワード（確認）
                   </label>
@@ -182,7 +179,10 @@ export default function SettingsPage() {
               <div className="pt-4 border-t border-gray-100 mt-6">
                 <button
                   type="submit"
-                  disabled={isLoading || (confirmPassword !== "" && newPassword !== confirmPassword)}
+                  disabled={
+                    isLoading ||
+                    (confirmPassword !== "" && newPassword !== confirmPassword)
+                  }
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-lg shadow-md hover:shadow-lg transform transition-all active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (

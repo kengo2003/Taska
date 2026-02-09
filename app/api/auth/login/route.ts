@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         AuthParameters: {
           USERNAME: email,
           PASSWORD: password,
-          //SECRET_HASH: secretHash,
+          SECRET_HASH: secretHash,
         },
       }),
     );
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
     response.cookies.set(cookieName, idToken, {
       httpOnly: true,
-      secure: secureCookie, // httpならfalse
+      secure: false, // httpならfalse
       sameSite: "lax",
       path: "/",
       maxAge: expiresIn, // id tokenの有効期限に合わせる
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     if (accessToken) {
       response.cookies.set(accessCookieName, accessToken, {
         httpOnly: true,
-        secure: secureCookie, // httpならfalse
+        secure: false, // httpならfalse
         sameSite: "lax",
         path: "/",
         maxAge: expiresIn,

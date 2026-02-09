@@ -112,10 +112,12 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   // 履歴一覧を取得
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await fetch(`/api/history?type=resume&limit=${historyLimit + 1}`);
+      const res = await fetch(
+        `/api/history?type=resume&limit=${historyLimit + 1}`,
+      );
       if (res.ok) {
         const data = await res.json();
-        
+
         if (data.length > historyLimit) {
           setHasMoreHistory(true);
           setSessions(data.slice(0, historyLimit));
@@ -329,7 +331,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       if (serverSessionId) {
         setCurrentSessionId(serverSessionId);
         if (newDifyId) setDifyConversationId(newDifyId);
-        
+
         fetchHistory();
       }
 
@@ -393,7 +395,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full">
+    <div className="flex min-h-dvh w-full">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
         <ChatSidebarContent
           sessions={sessions}
@@ -435,32 +437,35 @@ export default function ChatBase({ mode }: ChatBaseProps) {
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
               <div className="mt-4 mb-4 shrink-0">
                 <Title text={getCurrentTitle()} />
-                
+
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "analysis"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "analysis"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     自己分析
                   </Link>
                   <Link
                     href="/chat/create"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "create"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "create"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     履歴書作成
                   </Link>
                   <Link
                     href="/chat/critique"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "critique"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "critique"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     履歴書添削
                   </Link>
@@ -471,10 +476,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${msg.role === "user"
-                      ? "justify-end"
-                      : "justify-start items-start gap-3"
-                      }`}
+                    className={`flex ${
+                      msg.role === "user"
+                        ? "justify-end"
+                        : "justify-start items-start gap-3"
+                    }`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-blue-100 border border-blue-200">
@@ -484,10 +490,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                        }`}
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                        msg.role === "user"
+                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                      }`}
                     >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
