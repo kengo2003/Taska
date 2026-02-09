@@ -19,6 +19,7 @@ export default function Home() {
             height={150}
             className="object-contain"
             priority
+            unoptimized
           />
         </div>
 

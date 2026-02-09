@@ -10,7 +10,7 @@ const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
 const accessCookieName = process.env.AUTH_ACCESS_COOKIE_NAME || "taska_access";
 
 const isProduction = process.env.NODE_ENV === "production";
-// const secureCookie = isProduction;
+const secureCookie = isProduction;
 
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         AuthParameters: {
           USERNAME: email,
           PASSWORD: password,
-          SECRET_HASH: secretHash,
+          //SECRET_HASH: secretHash,
         },
       }),
     );

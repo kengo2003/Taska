@@ -242,6 +242,7 @@ export function FileListSection({ kbId }: { kbId: string }) {
                       className="w-full h-full object-cover rounded"
                       width={200}
                       height={200}
+                      unoptimized
                     />
                   )}
                 </div>

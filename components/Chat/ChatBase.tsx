@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
   X,
@@ -17,6 +17,7 @@ import remarkBreaks from "remark-breaks";
 
 import Header from "@/components/common/Header";
 import Sidebar from "@/components/common/Sidebar";
+import SidebarButton from "@/components/common/SidebarButton";
 import ChatSidebarContent from "@/components/Chat/ChatSidebarContent";
 import { Message, ChatSession } from "@/types/type";
 import {
@@ -25,6 +26,7 @@ import {
   CRITIQUE_TEMPLATES,
 } from "@/Templates/data";
 import Title from "../common/Title";
+import FeedbackButtons from "./FeedbackButtons";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
@@ -38,22 +40,60 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const formatDate = (date: Date) =>
-  `${date.getFullYear()}/${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
-
 interface ChatBaseProps {
   mode: ChatMode;
 }
 
 export default function ChatBase({ mode }: ChatBaseProps) {
+  // サイドバーの開閉状態管理
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // ★修正: 画面サイズ監視のロジック改善
+  useEffect(() => {
+    const checkMobile = () => window.innerWidth < 768;
+
+    // 初期化時の設定
+    const initialMobile = checkMobile();
+    setIsMobile(initialMobile);
+    if (!initialMobile) {
+      setIsSidebarOpen(true); // PCなら初期は開く
+    } else {
+      setIsSidebarOpen(false); // モバイルなら初期は閉じる
+    }
+
+    let prevIsMobile = initialMobile;
+
+    const handleResize = () => {
+      const currentIsMobile = checkMobile();
+      setIsMobile(currentIsMobile);
+
+      // ★重要: モバイル⇄PCの状態が切り替わった時だけサイドバーの状態を変更する
+      // これにより、PCモードで手動で閉じた後にリサイズイベントが走っても勝手に開かなくなる
+      if (currentIsMobile !== prevIsMobile) {
+        if (!currentIsMobile) {
+          setIsSidebarOpen(true); // モバイル→PCになったら開く
+        } else {
+          setIsSidebarOpen(false); // PC→モバイルになったら閉じる
+        }
+        prevIsMobile = currentIsMobile;
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [difyConversationId, setDifyConversationId] = useState<string>("");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
+
+  // 履歴の表示件数制御
+  const [historyLimit, setHistoryLimit] = useState(5);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -69,21 +109,33 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 初期化時に履歴一覧を取得 (Refresh対策)
-  useEffect(() => {
-    const fetchHistoryIndex = async () => {
-      try {
-        const res = await fetch("/api/history?type=resume");
-        if (res.ok) {
-          const data = await res.json();
+  // 履歴一覧を取得
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/history?type=resume&limit=${historyLimit + 1}`);
+      if (res.ok) {
+        const data = await res.json();
+        
+        if (data.length > historyLimit) {
+          setHasMoreHistory(true);
+          setSessions(data.slice(0, historyLimit));
+        } else {
+          setHasMoreHistory(false);
           setSessions(data);
         }
-      } catch (e) {
-        console.error("履歴の読み込みに失敗:", e);
       }
-    };
-    fetchHistoryIndex();
-  }, []);
+    } catch (e) {
+      console.error("履歴の読み込みに失敗:", e);
+    }
+  }, [historyLimit]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleLoadMore = () => {
+    setHistoryLimit((prev) => prev + 5);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,8 +179,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
-  // ハンドラ
-
   const startNewChat = () => {
     setCurrentSessionId(null);
     setDifyConversationId("");
@@ -137,33 +187,39 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     ]);
     setSelectedFiles([]);
     setInput("");
+
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
   };
 
-  // セッション選択時に詳細を取得
   const loadSession = async (session: ChatSession) => {
     setCurrentSessionId(session.id);
     setDifyConversationId(session.difyConversationId || "");
 
-    // UIを即時反応させるために、既存キャッシュがあれば表示
     setMessages(
       session.messages && session.messages.length > 0 ? session.messages : [],
     );
     setIsLoading(true);
 
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+
     try {
-      // S3から詳細データを取得
       const res = await fetch(`/api/history/${session.id}`);
       if (res.ok) {
         const data = await res.json();
         const loadedMessages = data.messages || [];
         setMessages(loadedMessages);
 
-        // ローカルのsessionsステートも更新
         setSessions((prev) =>
           prev.map((s) =>
             s.id === session.id ? { ...s, messages: loadedMessages } : s,
           ),
         );
+      } else {
+        console.error("履歴詳細の取得に失敗しました");
       }
     } catch (e) {
       console.error("詳細読み込みエラー:", e);
@@ -172,17 +228,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       setSelectedFiles([]);
       setInput("");
     }
-  };
-
-  const deleteSession = (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    if (!confirm("このチャット履歴を削除しますか？")) return;
-
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    if (currentSessionId === sessionId) {
-      startNewChat();
-    }
-    // サーバー側の削除APIができたら呼ぶ
   };
 
   const handleTemplateClick = (prompt: string) => {
@@ -208,7 +253,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     );
   };
 
-  // 引数から name を削除
   const handleFileClick = async (e: React.MouseEvent, url: string) => {
     e.preventDefault();
     if (!url) return;
@@ -220,14 +264,12 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
-  // メッセージ送信ハンドラ (S3連携版)
   const handleSend = async () => {
     if ((!input.trim() && selectedFiles.length === 0) || isLoading) return;
 
     const messageToSend = input;
     const filesToSend = [...selectedFiles];
 
-    // プレビュー用Base64作成
     let attachmentDataList: Message["attachments"] = [];
     if (filesToSend.length > 0) {
       try {
@@ -245,7 +287,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       }
     }
 
-    // ユーザーメッセージのUI反映
     const userMessage: Message = {
       role: "user",
       content: messageToSend,
@@ -261,14 +302,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "local-user");
 
-      // アプリ管理用ID (S3の保存先)
       if (currentSessionId) {
         formData.append("conversation_id", currentSessionId);
       }
-
-      // Dify管理用ID (AIの文脈用)
       if (difyConversationId) {
         formData.append("dify_conversation_id", difyConversationId);
       }
@@ -286,32 +323,16 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
       const data = await res.json();
 
-      // サーバーから返却されたIDを取得
-      const serverSessionId = data.conversation_id; // アプリ用ID
-      const newDifyId = data.dify_conversation_id; // Dify用ID
+      const serverSessionId = data.conversation_id;
+      const newDifyId = data.dify_conversation_id;
 
-      // ステート更新
       if (serverSessionId) {
         setCurrentSessionId(serverSessionId);
         if (newDifyId) setDifyConversationId(newDifyId);
-
-        // 新規チャットだった場合、サイドバーに追加
-        setSessions((prev) => {
-          const exists = prev.find((s) => s.id === serverSessionId);
-          if (exists) return prev;
-
-          const newSession: ChatSession = {
-            id: serverSessionId,
-            title: messageToSend.trim().substring(0, 20) || getCurrentTitle(),
-            date: formatDate(new Date()),
-            messages: [], // 詳細はAPI側で保存済み
-            difyConversationId: newDifyId,
-          };
-          return [newSession, ...prev];
-        });
+        
+        fetchHistory();
       }
 
-      // アシスタントメッセージの作成
       let assistantAttachments: Message["attachments"] = [];
       if (data.files && Array.isArray(data.files)) {
         assistantAttachments = data.files.map(
@@ -338,7 +359,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       const finalMessages = [...tempMessages, assistantMessage];
       setMessages(finalMessages);
 
-      // セッションリスト内のキャッシュも更新
       setSessions((prev) => {
         return prev.map((s) => {
           if (s.id === (serverSessionId || currentSessionId)) {
@@ -373,70 +393,88 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   };
 
   return (
-    <div className="flex h-screen w-full">
-      <Sidebar>
+    <div className="flex min-h-[100dvh] w-full">
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
         <ChatSidebarContent
           sessions={sessions}
           currentSessionId={currentSessionId}
           onNewChat={startNewChat}
           onSelectSession={loadSession}
-          onDeleteSession={deleteSession}
+          hasMore={hasMoreHistory}
+          onLoadMore={handleLoadMore}
         />
       </Sidebar>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="hidden md:block">
+          <Header />
+        </div>
+
+        <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <SidebarButton
+              isOpen={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+            <Link href={"/"}>
+              <div className="relative w-24 h-8">
+                <Image
+                  src="/TaskaLogo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </Link>
+          </div>
+        </div>
 
         <main className="flex-1 flex overflow-hidden relative bg-white">
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
               <div className="mt-4 mb-4 shrink-0">
                 <Title text={getCurrentTitle()} />
-
+                
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "analysis"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "analysis"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     自己分析
                   </Link>
                   <Link
                     href="/chat/create"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "create"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "create"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     履歴書作成
                   </Link>
                   <Link
                     href="/chat/critique"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      mode === "critique"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "critique"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     履歴書添削
                   </Link>
                 </div>
               </div>
 
-              {/* メッセージリスト */}
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2">
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${
-                      msg.role === "user"
-                        ? "justify-end"
-                        : "justify-start items-start gap-3"
-                    }`}
+                    className={`flex ${msg.role === "user"
+                      ? "justify-end"
+                      : "justify-start items-start gap-3"
+                      }`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-blue-100 border border-blue-200">
@@ -446,11 +484,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                      }`}
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
+                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                        }`}
                     >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
@@ -458,7 +495,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                             <a
                               key={i}
                               href="#"
-                              // ★修正: 引数を減らしました
                               onClick={(e) => handleFileClick(e, att.url)}
                               className="block hover:opacity-80 transition-opacity cursor-pointer"
                             >
@@ -470,6 +506,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                     width={128}
                                     height={128}
                                     className="w-full h-full object-cover"
+                                    unoptimized
                                   />
                                 </div>
                               ) : (
@@ -505,6 +542,18 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                           {msg.content}
                         </ReactMarkdown>
                       </div>
+
+                      {msg.role === "assistant" && (
+                        <FeedbackButtons
+                          messageId={`${currentSessionId || "temp"}-${idx}`}
+                          responseContent={msg.content}
+                          userPrompt={
+                            idx > 0 && messages[idx - 1].role === "user"
+                              ? messages[idx - 1].content
+                              : ""
+                          }
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -540,14 +589,14 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                   </div>
 
                   {showTemplates && (
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 px-1">
+                    <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 -mx-4 px-4 md:mx-0 md:px-1">
                       {getCurrentTemplates().map((template, index) => (
                         <button
                           key={index}
                           onClick={() => handleTemplateClick(template.prompt)}
-                          className="shrink-0 flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[180px] max-w-60"
+                          className="shrink-0 flex items-center gap-2 p-2 md:p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[150px] md:min-w-[180px] max-w-[180px] md:max-w-60"
                         >
-                          <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors">
+                          <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors shrink-0">
                             {template.icon}
                           </div>
                           <div className="flex-1 min-w-0">

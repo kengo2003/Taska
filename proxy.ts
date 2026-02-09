@@ -3,7 +3,7 @@ import { verifyIdToken } from "@/lib/auth/jwt";
 
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "taska_session";
 
-export async function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) { 
   const { pathname } = req.nextUrl;
 
   const publicPaths = [

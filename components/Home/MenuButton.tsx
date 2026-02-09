@@ -6,7 +6,7 @@ const MenuButton = ({ text, link, className }: MenuButtonProps) => {
   return (
     <div>
       <Button
-        className={`bg-amber-600 px-6 py-12 text-3xl ${className}`}
+        className={`bg-amber-600 px-6 py-8 md:py-12 text-xl md:text-3xl h-auto w-full ${className}`}
         asChild
       >
         <Link href={link}>{text}</Link>

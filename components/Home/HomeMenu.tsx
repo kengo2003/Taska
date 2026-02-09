@@ -36,12 +36,11 @@ const HomeMenu = () => {
 
   const isAdmin = me.groups.includes("Admin");
 
-  // 管理者かどうかでグリッドの列数を切り替える
-  // 管理者なら3列、それ以外なら2列にしてバランスをとる
-  const gridColsClass = isAdmin ? "grid-cols-3" : "grid-cols-2";
+  // レスポンシブ対応: モバイルは1列(grid-cols-1)、PC(md以上)は設定に応じて変更
+  const gridColsClass = isAdmin ? "md:grid-cols-3" : "md:grid-cols-2";
 
   return (
-    <div className={`grid ${gridColsClass} gap-4 px-10`}>
+    <div className={`grid grid-cols-1 ${gridColsClass} gap-4 px-4 md:px-10`}>
       <MenuButton
         text="履歴書ヘルパー"
         link="/chat"
@@ -53,7 +52,6 @@ const HomeMenu = () => {
         className="w-full bg-linear-to-b from-[#2978B2] to-[#12334C]"
       />
       
-      {/* 管理者の場合のみDOMに描画する（空のタグも出力しない） */}
       {isAdmin && (
         <MenuButton
           text="管理者"

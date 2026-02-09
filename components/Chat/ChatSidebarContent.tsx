@@ -1,90 +1,95 @@
-import { History } from "lucide-react";
+import React from "react";
+import { MessageSquare, ChevronDown } from "lucide-react";
 import { ChatSession } from "@/types/type";
 import { NewChatButton } from "./NewChatButton";
-import ChatHistoryItem from "./ChatHistoryItem";
 
-type Props = {
+interface ChatSidebarContentProps {
   sessions: ChatSession[];
   currentSessionId: string | null;
   onNewChat: () => void;
   onSelectSession: (session: ChatSession) => void;
-  onDeleteSession: (e: React.MouseEvent, sessionId: string) => void;
-};
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+}
 
-const ChatSidebarContent = ({
+export default function ChatSidebarContent({
   sessions,
   currentSessionId,
   onNewChat,
   onSelectSession,
-  onDeleteSession,
-}: Props) => {
-  // 日付でグループ化
-  const groupedSessions: { [key: string]: ChatSession[] } = {
-    今日: [],
-    昨日: [],
-    それ以前: [],
-  };
-
-  sessions.forEach((session) => {
-    const d = new Date(session.date);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    if (d.toDateString() === today.toDateString()) {
-      groupedSessions["今日"].push(session);
-    } else if (d.toDateString() === yesterday.toDateString()) {
-      groupedSessions["昨日"].push(session);
-    } else {
-      groupedSessions["それ以前"].push(session);
-    }
-  });
-
+  hasMore = false,
+  onLoadMore,
+}: ChatSidebarContentProps) {
   return (
-    <aside className="w-64 shrink-0 border-r border-gray-200 flex flex-col md:flex">
-      {/*ヘッダーとNewChatButtonは同じ*/}
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-gray-600 font-bold px-2 mb-2">
-          <History className="w-4 h-4" />
-          <span className="text-sm">チャット履歴</span>
-        </div>
-      </div>
-      <div className="px-4 mb-6">
+    <div className="flex flex-col h-full">
+      {/* 新規チャットボタン */}
+      <div className="p-4 pb-2">
         <NewChatButton onClick={onNewChat} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 scrollbar-thin pb-4">
-        {/* グループごとに表示 */}
-        {Object.entries(groupedSessions).map(
-          ([label, groupSessions]) =>
-            groupSessions.length > 0 && (
-              <div key={label} className="mb-4">
-                <div className="text-xs text-gray-500 mb-2 font-bold tracking-wide">
-                  {label}
-                </div>
-                <ul className="space-y-2">
-                  {groupSessions.map((session) => (
-                    <ChatHistoryItem
-                      key={session.id}
-                      session={session}
-                      isActive={currentSessionId === session.id}
-                      onSelect={onSelectSession}
-                      onDelete={onDeleteSession}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ),
-        )}
+      {/* 履歴リスト */}
+      <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-gray-200">
+        <div className="text-xs font-bold text-gray-400 px-4 py-2 mb-1">
+          履歴
+        </div>
 
-        {sessions.length === 0 && (
-          <div className="text-xs text-gray-500 text-center py-4">
-            履歴はありません
-          </div>
+        <div className="space-y-1">
+          {sessions.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+              履歴はありません
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                onClick={() => onSelectSession(session)}
+                className={`group relative flex items-start gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                  currentSessionId === session.id
+                    ? "bg-blue-50 text-blue-700 font-medium shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <MessageSquare
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    currentSessionId === session.id
+                      ? "text-blue-500"
+                      : "text-gray-400 group-hover:text-gray-500"
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  {/* タイトル */}
+                  <div className="truncate text-sm mb-0.5 font-medium">
+                    {session.title || "無題のチャット"}
+                  </div>
+                  
+                  {/* 時間とメールアドレスの表示 */}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
+                      {session.date}
+                    </div>
+                    {session.email && (
+                      <div className="text-[10px] opacity-50 truncate text-gray-400">
+                        {session.email}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* もっと見るボタン */}
+        {hasMore && onLoadMore && (
+          <button
+            onClick={onLoadMore}
+            className="w-full mt-4 flex items-center justify-center gap-2 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ChevronDown className="w-3 h-3" />
+            もっと見る
+          </button>
         )}
       </div>
-    </aside>
+    </div>
   );
-};
-
-export default ChatSidebarContent;
+}
