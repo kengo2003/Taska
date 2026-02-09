@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import {
-  CognitoIdentityProviderClient,
-  GetUserCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
+import { verifyIdToken } from "@/lib/auth/jwt";
 
 const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
-
-// 認証情報を明示
-const client = new CognitoIdentityProviderClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  },
-});
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -25,36 +13,21 @@ export async function GET() {
   }
 
   try {
-    const command = new GetUserCommand({ AccessToken: token });
-    const user = await client.send(command);
+    const claims = await verifyIdToken(token);
 
-    // UserAttributes から email を探す
-    const emailAttr = user.UserAttributes?.find(
-      (attr) => attr.Name === "email",
+    const groups = (claims["cognito:groups"] ?? []) as string[];
+
+    return NextResponse.json(
+      {
+        loggedIn: true,
+        email: claims.email,
+        groups,
+        sub: claims.sub,
+      },
+      { status: 200 },
     );
-    const email = emailAttr?.Value;
-
-    // トークンからグループ情報を簡易取得
-    const parts = token.split(".");
-    let groups: string[] = [];
-    if (parts.length > 1) {
-      try {
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-        groups = payload["cognito:groups"] ?? [];
-      } catch (e) {
-        console.error("Token parse error", e);
-      }
-    }
-
-    return NextResponse.json({
-      loggedIn: true,
-      email: email,
-      groups: groups,
-      sub: user.Username,
-    });
   } catch (error) {
     console.error("Auth Me Error:", error);
-    // トークン期限切れなどでGetUserが失敗した場合
     return NextResponse.json({ loggedIn: false }, { status: 200 });
   }
 }

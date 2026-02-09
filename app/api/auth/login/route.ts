@@ -7,6 +7,8 @@ import crypto from "crypto";
 
 const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
 
+const accessCookieName = process.env.AUTH_ACCESS_COOKIE_NAME || "taska_access";
+
 const isProduction = process.env.NODE_ENV === "production";
 // const secureCookie = isProduction;
 
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const email = body?.email?.toString() ?? "";
   const password = body?.password?.toString() ?? "";
+  const secretHash = calcSecretHash(email);
 
   if (!email.endsWith("@hcs.ac.jp")) {
     return NextResponse.json({ error: "invalid_domain" }, { status: 401 });
@@ -40,8 +43,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    const secretHash = calcSecretHash(email);
-
     const res = await client.send(
       new InitiateAuthCommand({
         AuthFlow: "USER_PASSWORD_AUTH",
@@ -54,33 +55,33 @@ export async function POST(req: Request) {
       }),
     );
 
+    const idToken = res.AuthenticationResult?.IdToken;
     const accessToken = res.AuthenticationResult?.AccessToken;
+    const expiresIn = res.AuthenticationResult?.ExpiresIn ?? 3600;
 
-    if (!accessToken) {
-      return NextResponse.json({ error: "no_token" }, { status: 401 });
+    if (!idToken) {
+      return NextResponse.json({ error: "no_id_token" }, { status: 401 });
     }
 
-    let groups: string[] = [];
-    try {
-      const payloadPart = accessToken.split(".")[1];
-      const decodedPayload = JSON.parse(
-        Buffer.from(payloadPart, "base64").toString("utf-8"),
-      );
-      groups = decodedPayload["cognito:groups"] || [];
-    } catch (e) {
-      console.error("Token decode error:", e);
-    }
+    const response = NextResponse.json({ ok: true });
 
-    const response = NextResponse.json({ ok: true, groups });
-
-    // Cookie設定
-    response.cookies.set(cookieName, accessToken, {
+    response.cookies.set(cookieName, idToken, {
       httpOnly: true,
-      secure: false, // false ならlocalhostでも保存されます
+      secure: secureCookie, // httpならfalse
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60,
+      maxAge: expiresIn, // id tokenの有効期限に合わせる
     });
+
+    if (accessToken) {
+      response.cookies.set(accessCookieName, accessToken, {
+        httpOnly: true,
+        secure: secureCookie,
+        sameSite: "lax",
+        path: "/",
+        maxAge: expiresIn,
+      });
+    }
 
     return response;
   } catch (e: any) {
