@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
   X,
@@ -40,11 +40,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const formatDate = (date: Date) =>
-  `${date.getFullYear()}/${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
-
 interface ChatBaseProps {
   mode: ChatMode;
 }
@@ -52,17 +47,41 @@ interface ChatBaseProps {
 export default function ChatBase({ mode }: ChatBaseProps) {
   // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // 画面サイズに応じて初期状態を設定
+  // ★修正: 画面サイズ監視のロジック改善
   useEffect(() => {
+    const checkMobile = () => window.innerWidth < 768;
+
+    // 初期化時の設定
+    const initialMobile = checkMobile();
+    setIsMobile(initialMobile);
+    if (!initialMobile) {
+      setIsSidebarOpen(true); // PCなら初期は開く
+    } else {
+      setIsSidebarOpen(false); // モバイルなら初期は閉じる
+    }
+
+    let prevIsMobile = initialMobile;
+
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
+      const currentIsMobile = checkMobile();
+      setIsMobile(currentIsMobile);
+
+      // ★重要: モバイル⇄PCの状態が切り替わった時だけサイドバーの状態を変更する
+      // これにより、PCモードで手動で閉じた後にリサイズイベントが走っても勝手に開かなくなる
+      if (currentIsMobile !== prevIsMobile) {
+        if (!currentIsMobile) {
+          setIsSidebarOpen(true); // モバイル→PCになったら開く
+        } else {
+          setIsSidebarOpen(false); // PC→モバイルになったら閉じる
+        }
+        prevIsMobile = currentIsMobile;
       }
     };
-    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const [input, setInput] = useState("");
@@ -71,6 +90,10 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
+
+  // 履歴の表示件数制御
+  const [historyLimit, setHistoryLimit] = useState(5);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -86,21 +109,33 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 初期化時に履歴一覧を取得
-  useEffect(() => {
-    const fetchHistoryIndex = async () => {
-      try {
-        const res = await fetch("/api/history?type=resume");
-        if (res.ok) {
-          const data = await res.json();
+  // 履歴一覧を取得
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/history?type=resume&limit=${historyLimit + 1}`);
+      if (res.ok) {
+        const data = await res.json();
+        
+        if (data.length > historyLimit) {
+          setHasMoreHistory(true);
+          setSessions(data.slice(0, historyLimit));
+        } else {
+          setHasMoreHistory(false);
           setSessions(data);
         }
-      } catch (e) {
-        console.error("履歴の読み込みに失敗:", e);
       }
-    };
-    fetchHistoryIndex();
-  }, []);
+    } catch (e) {
+      console.error("履歴の読み込みに失敗:", e);
+    }
+  }, [historyLimit]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleLoadMore = () => {
+    setHistoryLimit((prev) => prev + 5);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -144,7 +179,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
-  // ハンドラ
   const startNewChat = () => {
     setCurrentSessionId(null);
     setDifyConversationId("");
@@ -154,8 +188,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     setSelectedFiles([]);
     setInput("");
 
-    // モバイルの場合は新規チャット開始時にサイドバーを閉じる
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       setIsSidebarOpen(false);
     }
   };
@@ -169,8 +202,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     );
     setIsLoading(true);
 
-    // モバイルの場合はセッション選択時にサイドバーを閉じる
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       setIsSidebarOpen(false);
     }
 
@@ -270,7 +302,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "client-user");
 
       if (currentSessionId) {
         formData.append("conversation_id", currentSessionId);
@@ -298,20 +329,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       if (serverSessionId) {
         setCurrentSessionId(serverSessionId);
         if (newDifyId) setDifyConversationId(newDifyId);
-
-        setSessions((prev) => {
-          const exists = prev.find((s) => s.id === serverSessionId);
-          if (exists) return prev;
-
-          const newSession: ChatSession = {
-            id: serverSessionId,
-            title: messageToSend.trim().substring(0, 20) || getCurrentTitle(),
-            date: formatDate(new Date()),
-            messages: [],
-            difyConversationId: newDifyId,
-          };
-          return [newSession, ...prev];
-        });
+        
+        fetchHistory();
       }
 
       let assistantAttachments: Message["attachments"] = [];
@@ -381,16 +400,16 @@ export default function ChatBase({ mode }: ChatBaseProps) {
           currentSessionId={currentSessionId}
           onNewChat={startNewChat}
           onSelectSession={loadSession}
+          hasMore={hasMoreHistory}
+          onLoadMore={handleLoadMore}
         />
       </Sidebar>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* PC用ヘッダー (md以上で表示) */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <div className="hidden md:block">
           <Header />
         </div>
 
-        {/* モバイル用ヘッダー (md未満で表示) */}
         <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <SidebarButton
@@ -416,7 +435,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
               <div className="mt-4 mb-4 shrink-0">
                 <Title text={getCurrentTitle()} />
-
+                
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"
@@ -448,7 +467,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 </div>
               </div>
 
-              {/* メッセージリスト */}
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2">
                 {messages.map((msg, idx) => (
                   <div
@@ -471,7 +489,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
                         }`}
                     >
-                      {/* メッセージ内容の表示ロジックは既存のまま */}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {msg.attachments.map((att, i) => (
@@ -552,10 +569,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 入力エリア */}
               <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
                 <div className="mb-3">
-                  {/* テンプレート表示トグル */}
                   <div className="flex justify-between items-center mb-2 px-1">
                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-yellow-500" />
@@ -575,14 +590,12 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
                   {showTemplates && (
                     <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 -mx-4 px-4 md:mx-0 md:px-1">
-                      {/* ^^^ モバイルで左右のマージンをネガティブにして画面端まで広げる(-mx-4 px-4) */}
                       {getCurrentTemplates().map((template, index) => (
                         <button
                           key={index}
                           onClick={() => handleTemplateClick(template.prompt)}
                           className="shrink-0 flex items-center gap-2 p-2 md:p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[150px] md:min-w-[180px] max-w-[180px] md:max-w-60"
                         >
-                          {/* ^^^ ボタンサイズもモバイル向けに少し小さく調整 (min-w, max-w, p) */}
                           <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors shrink-0">
                             {template.icon}
                           </div>
