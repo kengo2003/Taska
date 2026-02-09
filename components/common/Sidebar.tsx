@@ -12,7 +12,6 @@ type Props = {
 const Sidebar = ({ isOpen, setIsOpen, children }: Props) => {
   return (
     <>
-      {/* モバイル用オーバーレイ */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
@@ -20,7 +19,6 @@ const Sidebar = ({ isOpen, setIsOpen, children }: Props) => {
         onClick={() => setIsOpen(false)}
       />
 
-      {/* サイドバー本体 */}
       <aside
         className={`
           /* 共通設定 */
