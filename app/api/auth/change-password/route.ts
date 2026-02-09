@@ -19,10 +19,11 @@ export async function POST(request: Request) {
 
     const cookieStore = await cookies();
 
-    const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
-    const idToken = cookieStore.get(cookieName)?.value;
+    const accessCookieName =
+      process.env.AUTH_ACCESS_COOKIE_NAME || "taska_access";
+    const accessToken = cookieStore.get(accessCookieName)?.value;
 
-    if (!idToken) {
+    if (!accessToken) {
       return NextResponse.json(
         { error: "認証されていません。再度ログインしてください。" },
         { status: 401 },
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
 
     // AWS Cognitoに対してパスワード変更を要求
     const command = new ChangePasswordCommand({
-      AccessToken: idToken,
+      AccessToken: accessToken,
       PreviousPassword: oldPassword,
       ProposedPassword: newPassword,
     });
