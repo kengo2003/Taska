@@ -62,16 +62,11 @@ export default function ChatSidebarContent({
                     {session.title || "無題のチャット"}
                   </div>
                   
-                  {/* 時間とメールアドレスの表示 */}
+                  {/* 時間の表示 (メールアドレスは削除しました) */}
                   <div className="flex flex-col gap-0.5">
                     <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
                       {session.date}
                     </div>
-                    {session.email && (
-                      <div className="text-[10px] opacity-50 truncate text-gray-400">
-                        {session.email}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

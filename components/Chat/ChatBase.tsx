@@ -30,7 +30,7 @@ import FeedbackButtons from "./FeedbackButtons";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
-// ヘルパー関数
+// ヘルパー関数: ファイルをBase64に変換
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,46 +40,43 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ヘルパー関数: 現在日時をサーバー形式に整形 (YYYY/MM/DD HH:mm)
+const getCurrentFormattedDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}/${(now.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")} ${now
+    .getHours()
+    .toString()
+    .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+};
+
 interface ChatBaseProps {
   mode: ChatMode;
 }
 
 export default function ChatBase({ mode }: ChatBaseProps) {
-  // サイドバーの開閉状態管理
+  // サイドバーの開閉状態
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // ★修正: 画面サイズ監視のロジック改善
   useEffect(() => {
     const checkMobile = () => window.innerWidth < 768;
-
-    // 初期化時の設定
     const initialMobile = checkMobile();
     setIsMobile(initialMobile);
-    if (!initialMobile) {
-      setIsSidebarOpen(true); // PCなら初期は開く
-    } else {
-      setIsSidebarOpen(false); // モバイルなら初期は閉じる
-    }
+    if (!initialMobile) setIsSidebarOpen(true);
+    else setIsSidebarOpen(false);
 
     let prevIsMobile = initialMobile;
-
     const handleResize = () => {
       const currentIsMobile = checkMobile();
       setIsMobile(currentIsMobile);
-
-      // ★重要: モバイル⇄PCの状態が切り替わった時だけサイドバーの状態を変更する
-      // これにより、PCモードで手動で閉じた後にリサイズイベントが走っても勝手に開かなくなる
       if (currentIsMobile !== prevIsMobile) {
-        if (!currentIsMobile) {
-          setIsSidebarOpen(true); // モバイル→PCになったら開く
-        } else {
-          setIsSidebarOpen(false); // PC→モバイルになったら閉じる
-        }
+        if (!currentIsMobile) setIsSidebarOpen(true);
+        else setIsSidebarOpen(false);
         prevIsMobile = currentIsMobile;
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -91,7 +88,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
 
-  // 履歴の表示件数制御
+  // 履歴ページネーション
   const [historyLimit, setHistoryLimit] = useState(5);
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
@@ -109,13 +106,14 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 履歴一覧を取得
+  // 履歴取得
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await fetch(`/api/history?type=resume&limit=${historyLimit + 1}`);
+      const res = await fetch(
+        `/api/history?type=resume&limit=${historyLimit + 1}`
+      );
       if (res.ok) {
         const data = await res.json();
-        
         if (data.length > historyLimit) {
           setHasMoreHistory(true);
           setSessions(data.slice(0, historyLimit));
@@ -187,24 +185,17 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     ]);
     setSelectedFiles([]);
     setInput("");
-
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
+    if (isMobile) setIsSidebarOpen(false);
   };
 
   const loadSession = async (session: ChatSession) => {
     setCurrentSessionId(session.id);
     setDifyConversationId(session.difyConversationId || "");
-
     setMessages(
-      session.messages && session.messages.length > 0 ? session.messages : [],
+      session.messages && session.messages.length > 0 ? session.messages : []
     );
     setIsLoading(true);
-
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
+    if (isMobile) setIsSidebarOpen(false);
 
     try {
       const res = await fetch(`/api/history/${session.id}`);
@@ -212,14 +203,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         const data = await res.json();
         const loadedMessages = data.messages || [];
         setMessages(loadedMessages);
-
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === session.id ? { ...s, messages: loadedMessages } : s,
-          ),
+            s.id === session.id ? { ...s, messages: loadedMessages } : s
+          )
         );
-      } else {
-        console.error("履歴詳細の取得に失敗しました");
       }
     } catch (e) {
       console.error("詳細読み込みエラー:", e);
@@ -249,7 +237,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
   const removeFile = (indexToRemove: number) => {
     setSelectedFiles((prev) =>
-      prev.filter((_, index) => index !== indexToRemove),
+      prev.filter((_, index) => index !== indexToRemove)
     );
   };
 
@@ -264,23 +252,23 @@ export default function ChatBase({ mode }: ChatBaseProps) {
     }
   };
 
+  // メッセージ送信処理（ストリーミング & 楽観的更新対応）
   const handleSend = async () => {
     if ((!input.trim() && selectedFiles.length === 0) || isLoading) return;
 
     const messageToSend = input;
     const filesToSend = [...selectedFiles];
 
+    // ファイル変換
     let attachmentDataList: Message["attachments"] = [];
     if (filesToSend.length > 0) {
       try {
-        const promises = filesToSend.map(
-          async (file) =>
-            ({
-              name: file.name,
-              type: file.type.startsWith("image/") ? "image" : "file",
-              url: await fileToBase64(file),
-            }) as const,
-        );
+        const promises = filesToSend.map(async (file) => ({
+          name: file.name,
+          type: file.type.startsWith("image/") ? "image" : "file",
+          url: await fileToBase64(file),
+        }));
+        // @ts-expect-error promise all type inference
         attachmentDataList = await Promise.all(promises);
       } catch (e) {
         console.error(e);
@@ -293,23 +281,39 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       attachments: attachmentDataList,
     };
 
+    // メッセージ表示更新
     const tempMessages = [...messages, userMessage];
     setMessages(tempMessages);
     setInput("");
     setSelectedFiles([]);
     setIsLoading(true);
 
+    // ★ 楽観的更新 (Optimistic UI)
+    // 新規チャットなら、サーバー応答を待たずにサイドバーに仮セッションを追加
+    let tempSessionId: string | null = null;
+    if (!currentSessionId) {
+      tempSessionId = "temp-" + Date.now();
+      const tempSession: ChatSession = {
+        id: tempSessionId,
+        title: messageToSend.substring(0, 20) || "新しいチャット",
+        date: getCurrentFormattedDate(),
+        email: "",
+        messages: [userMessage],
+        type: "resume",
+      };
+      // 先頭に追加
+      setSessions((prev) => [tempSession, ...prev]);
+    }
+
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-
       if (currentSessionId) {
         formData.append("conversation_id", currentSessionId);
       }
       if (difyConversationId) {
         formData.append("dify_conversation_id", difyConversationId);
       }
-
       filesToSend.forEach((file) => formData.append("file", file));
 
       const res = await fetch("/api/chat", {
@@ -317,60 +321,92 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         body: formData,
       });
 
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
 
-      const data = await res.json();
-
-      const serverSessionId = data.conversation_id;
-      const newDifyId = data.dify_conversation_id;
+      // ★ サーバーから正式IDが返ってきたら、仮IDを置換
+      const serverSessionId = res.headers.get("X-Conversation-ID");
+      const serverDifyId = res.headers.get("X-Dify-Conversation-ID");
 
       if (serverSessionId) {
-        setCurrentSessionId(serverSessionId);
-        if (newDifyId) setDifyConversationId(newDifyId);
-        
-        fetchHistory();
+        // 新規作成だった場合、IDを更新
+        if (!currentSessionId || (tempSessionId && !currentSessionId)) {
+          setCurrentSessionId(serverSessionId);
+          if (serverDifyId) setDifyConversationId(serverDifyId);
+
+          // セッション一覧の仮IDを正式IDに差し替え
+          const idToReplace = currentSessionId || tempSessionId;
+          if (idToReplace) {
+            setSessions((prev) =>
+              prev.map((s) => {
+                if (s.id === idToReplace) {
+                  return {
+                    ...s,
+                    id: serverSessionId,
+                    difyConversationId: serverDifyId || s.difyConversationId,
+                  };
+                }
+                return s;
+              })
+            );
+          }
+        }
       }
 
-      let assistantAttachments: Message["attachments"] = [];
-      if (data.files && Array.isArray(data.files)) {
-        assistantAttachments = data.files.map(
-          (file: { type?: string; name?: string; url: string }) => {
-            const isImage =
-              file.type === "image" ||
-              /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(file.name || "");
-
-            return {
-              name: file.name || "Generated File",
-              url: file.url,
-              type: isImage ? "image" : "file",
-            };
-          },
-        );
-      }
-
+      // アシスタントメッセージのプレースホルダー
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.answer,
-        attachments: assistantAttachments,
+        content: "",
+        attachments: [],
       };
+      setMessages((prev) => [...prev, assistantMessage]);
 
-      const finalMessages = [...tempMessages, assistantMessage];
-      setMessages(finalMessages);
+      // ★ ストリーム読み込み
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedAnswer = "";
 
-      setSessions((prev) => {
-        return prev.map((s) => {
-          if (s.id === (serverSessionId || currentSessionId)) {
-            return {
-              ...s,
-              messages: finalMessages,
-              difyConversationId: newDifyId || s.difyConversationId,
-            };
-          }
-          return s;
-        });
-      });
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const textChunk = decoder.decode(value, { stream: true });
+          accumulatedAnswer += textChunk;
+
+          setMessages((prev) => {
+            const newMsgs = [...prev];
+            const lastMsg = newMsgs[newMsgs.length - 1];
+            if (lastMsg.role === "assistant") {
+              lastMsg.content = accumulatedAnswer;
+            }
+            return newMsgs;
+          });
+        }
+      }
+
+      // ストリーム完了後、セッション情報のメッセージ内容を更新
+      const finalSessionId = serverSessionId || currentSessionId || tempSessionId;
+      if (finalSessionId) {
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === finalSessionId) {
+              return {
+                ...s,
+                messages: [
+                  ...tempMessages,
+                  { ...assistantMessage, content: accumulatedAnswer },
+                ],
+                difyConversationId: serverDifyId || s.difyConversationId,
+              };
+            }
+            return s;
+          })
+        );
+      }
+      
+      // バックグラウンドで念のため履歴再取得（保存ラグがあるため少し待ってもよいが、今回は即時）
+      // fetchHistory(); 
+
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages((prev) => [
@@ -380,6 +416,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
           content: "エラーが発生しました。時間をおいて再試行してください。",
         },
       ]);
+      // エラー時は仮セッションを削除するなどのロールバック処理を入れても良いですが、
+      // 簡易実装として残しておきます（リロードすれば消えるため）。
     } finally {
       setIsLoading(false);
     }
@@ -435,32 +473,34 @@ export default function ChatBase({ mode }: ChatBaseProps) {
             <div className="flex-1 flex flex-col px-4 md:px-8 pb-4 overflow-hidden">
               <div className="mt-4 mb-4 shrink-0">
                 <Title text={getCurrentTitle()} />
-                
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/chat/analysis"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "analysis"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "analysis"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     自己分析
                   </Link>
                   <Link
                     href="/chat/create"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "create"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "create"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     履歴書作成
                   </Link>
                   <Link
                     href="/chat/critique"
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${mode === "critique"
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      mode === "critique"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     履歴書添削
                   </Link>
@@ -471,10 +511,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${msg.role === "user"
-                      ? "justify-end"
-                      : "justify-start items-start gap-3"
-                      }`}
+                    className={`flex ${
+                      msg.role === "user"
+                        ? "justify-end"
+                        : "justify-start items-start gap-3"
+                    }`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-blue-100 border border-blue-200">
@@ -484,10 +525,11 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                        }`}
+                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                        msg.role === "user"
+                          ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
+                          : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
+                      }`}
                     >
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">

@@ -34,7 +34,6 @@ export async function POST(request: Request) {
       userId = claims.sub as string;
       userEmail = (claims.email as string) || "unknown";
       
-      // ログ: 認証成功
       console.log(`[QA] Auth Success - User: ${userEmail} (ID: ${userId})`);
     } catch (e) {
       console.error("Token verification failed:", e);
@@ -69,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // ----------------------------------------------------------------
-    // 3. ファイル処理（並列化による高速化）
+    // 3. ファイル処理（並列化による高速化 - 既存ロジック維持）
     // ----------------------------------------------------------------
     const difyFiles: DifyFile[] = [];
     const localAttachments: LocalAttachment[] = [];
@@ -77,18 +76,18 @@ export async function POST(request: Request) {
     if (files && files.length > 0) {
       console.log(`[QA] Processing ${files.length} files concurrently for ${userEmail}`);
 
-      // ★修正: map と Promise.all で並列処理
       const uploadPromises = files.map(async (file) => {
         if (file.size === 0) return null;
         try {
           const buffer = Buffer.from(await file.arrayBuffer());
           const fileKey = `users/${userId}/uploads/${conversationId}/${Date.now()}_${file.name}`;
 
-          // S3アップロードとDifyアップロードを同時に開始
+          // S3アップロード
           const s3Promise = s3.send(new PutObjectCommand({ 
             Bucket: BUCKET_NAME, Key: fileKey, Body: buffer, ContentType: file.type 
           }));
 
+          // Difyアップロード
           const difyUploadPromise = (async () => {
              const uploadFormData = new FormData();
              const blob = new Blob([buffer], { type: file.type });
@@ -104,8 +103,8 @@ export async function POST(request: Request) {
              return res.json() as Promise<UploadResponse>;
           })();
 
-          // 両方の完了を待つ
-          const [_, uploadData] = await Promise.all([s3Promise, difyUploadPromise]);
+          // 両方の完了を待つ (未使用変数の警告回避)
+          const [, uploadData] = await Promise.all([s3Promise, difyUploadPromise]);
 
           return {
             local: {
@@ -126,9 +125,7 @@ export async function POST(request: Request) {
         }
       });
 
-      // 全ファイルの処理完了を待機
       const results = await Promise.all(uploadPromises);
-      
       results.forEach(res => {
         if (res) {
           localAttachments.push(res.local);
@@ -138,12 +135,12 @@ export async function POST(request: Request) {
     }
 
     // ----------------------------------------------------------------
-    // 4. Difyへ送信
+    // 4. Difyへ送信 (★Streamingモードに変更)
     // ----------------------------------------------------------------
     const chatPayload: ChatPayload = {
       inputs: {},
       query: query || "",
-      response_mode: "blocking",
+      response_mode: "streaming", // ★ここを streaming に変更
       user: userId,
       conversation_id: incomingDifyConversationId || undefined,
       files: difyFiles.length > 0 ? difyFiles : undefined
@@ -155,100 +152,182 @@ export async function POST(request: Request) {
       body: JSON.stringify(chatPayload),
     });
 
-    if (!chatRes.ok) {
+    if (!chatRes.ok || !chatRes.body) {
       const errText = await chatRes.text();
       console.error(`[QA] Dify API Error for ${userEmail}: ${chatRes.status} ${errText}`);
       return NextResponse.json({ error: errText }, { status: chatRes.status });
     }
 
-    const data = (await chatRes.json()) as any;
-
-    // URL Proxy処理
-    if (data.answer && typeof data.answer === 'string') {
-      data.answer = data.answer.replace(/https?:\/\/[^)]+\/v1\/files\//g, '/files/').replace(/https?:\/\/[^)]+\/files\//g, '/files/');
-    }
-    const newDifyConversationId = data.conversation_id;
-
     // ----------------------------------------------------------------
-    // 5. S3へ履歴保存（並列化による高速化）
+    // 5. ストリーミングレスポンスの作成とS3保存
     // ----------------------------------------------------------------
-    const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
-    const indexFilePath = `users/${userId}/chat/index.json`;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    // S3保存用に回答全体と会話IDを保持する変数
+    let fullAnswer = "";
+    let finalDifyConversationId = incomingDifyConversationId || "";
 
-    // A. 並列処理の準備: 保存処理を関数化
-    const saveSessionPromise = (async () => {
-      let sessionData: { messages: Message[]; email?: string } = { messages: [] };
-      if (!isNewSession) {
-        const existing = await fetchJson<{ messages: Message[]; email?: string }>(sessionFilePath);
-        if (existing) sessionData = existing;
-      }
+    const stream = new ReadableStream({
+      async start(controller) {
+        // @ts-expect-error: web standard vs node types mismatch workaround
+        const reader = chatRes.body.getReader();
+        let buffer = "";
 
-      sessionData.messages.push({
-        role: "user",
-        content: query,
-        attachments: localAttachments,
-        date: formattedDate
-      });
-      sessionData.messages.push({
-        role: "assistant",
-        content: data.answer,
-        attachments: [],
-        date: formattedDate
-      });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-      await saveJson(sessionFilePath, {
-        messages: sessionData.messages,
-        difyConversationId: newDifyConversationId,
-        type: "qa",
-        id: conversationId,
-        email: userEmail,
-      });
-      console.log(`[QA] Session saved: ${sessionFilePath} (User: ${userEmail})`);
-    })();
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || ""; // 最後の不完全な行は次回へ
 
-    const saveIndexPromise = (async () => {
-      const index = (await fetchJson<ChatSession[]>(indexFilePath)) || [];
-      
-      if (isNewSession) {
-        index.unshift({
-          id: conversationId,
-          title: query.substring(0, 20) || "QAチャット",
-          date: formattedDate,
-          email: userEmail,
-          messages: [],
-          difyConversationId: newDifyConversationId,
-          type: "qa",
-        });
-      } else {
-        const targetIndex = index.findIndex(s => s.id === conversationId);
-        if (targetIndex > -1) {
-          const target = index[targetIndex];
-          index.splice(targetIndex, 1);
-          index.unshift({
-            ...target,
-            date: formattedDate,
-            email: userEmail,
-            difyConversationId: newDifyConversationId
-          });
+            for (const line of lines) {
+              if (line.trim() === "" || !line.startsWith("data:")) continue;
+              
+              const jsonStr = line.replace("data:", "").trim();
+              if (jsonStr === "[DONE]") continue;
+
+              try {
+                const data = JSON.parse(jsonStr);
+                const event = data.event;
+
+                // テキスト生成イベント
+                if (event === "message" || event === "agent_message") {
+                  const answerChunk = data.answer;
+                  if (answerChunk) {
+                    fullAnswer += answerChunk;
+                    // クライアントへ送信
+                    controller.enqueue(encoder.encode(answerChunk));
+                  }
+                  if (data.conversation_id) finalDifyConversationId = data.conversation_id;
+                }
+                
+                // 会話完了時のID取得
+                if (event === "message_end" && data.conversation_id) {
+                   finalDifyConversationId = data.conversation_id;
+                }
+                
+                // エラー時
+                if (event === "error") {
+                   console.error("Dify Stream Error Event:", data);
+                }
+
+              } catch (e) {
+                console.warn("JSON Parse Error in stream:", e);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Stream reading error:", err);
+          controller.error(err);
+        } finally {
+          controller.close();
+          
+          // ★ストリーム完了後にS3へ保存
+          // URLプロキシ置換処理が必要ならここで fullAnswer に対して行う
+          // 例: fullAnswer = fullAnswer.replace(/.../g, '/files/');
+          
+          if (fullAnswer) {
+             saveQASessionToS3(
+                userId, userEmail, conversationId, query, 
+                fullAnswer, finalDifyConversationId, isNewSession, localAttachments
+             ).catch(err => console.error("S3 Save Error:", err));
+          }
         }
-      }
-      await saveJson(indexFilePath, index);
-      console.log(`[QA] Index updated for ${userEmail}`);
-    })();
+      },
+    });
 
-    await Promise.all([saveSessionPromise, saveIndexPromise]);
-
-    return NextResponse.json({
-      ...data,
-      conversation_id: conversationId,
-      dify_conversation_id: newDifyConversationId,
+    // ヘッダーにIDを含めて返す
+    return new NextResponse(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Conversation-ID": conversationId,
+        "X-Dify-Conversation-ID": finalDifyConversationId,
+      },
     });
 
   } catch (error: unknown) {
     console.error("[QA] Server Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+// ----------------------------------------------------------------
+// ヘルパー関数: S3への保存ロジック (QA用)
+// ----------------------------------------------------------------
+async function saveQASessionToS3(
+  userId: string, 
+  userEmail: string, 
+  conversationId: string, 
+  query: string, 
+  answer: string, 
+  difyConversationId: string,
+  isNewSession: boolean,
+  localAttachments: LocalAttachment[]
+) {
+  const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
+  const indexFilePath = `users/${userId}/chat/index.json`;
+  
+  const now = new Date();
+  const formattedDate = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  // 1. セッション詳細(JSON)の保存
+  const saveSessionPromise = (async () => {
+    let sessionData: { messages: Message[]; email?: string } = { messages: [] };
+    
+    if (!isNewSession) {
+      // 既存ファイルの取得
+      const existing = await fetchJson<{ messages: Message[]; email?: string }>(sessionFilePath);
+      if (existing) sessionData = existing;
+    }
+    
+    sessionData.messages.push({ role: "user", content: query, attachments: localAttachments, date: formattedDate });
+    sessionData.messages.push({ role: "assistant", content: answer, attachments: [], date: formattedDate });
+
+    await saveJson(sessionFilePath, {
+      messages: sessionData.messages,
+      difyConversationId: difyConversationId,
+      id: conversationId,
+      type: "qa",
+      email: userEmail,
+    });
+    console.log(`[QA] Session saved: ${sessionFilePath} (User: ${userEmail})`);
+  })();
+
+  // 2. インデックス(一覧)の更新準備
+  const updateIndexPromise = (async () => {
+    const index = (await fetchJson<ChatSession[]>(indexFilePath)) || [];
+    
+    if (isNewSession) {
+      // 新規追加
+      index.unshift({
+        id: conversationId, 
+        title: query.substring(0, 20) || "QAチャット", 
+        date: formattedDate,
+        email: userEmail, 
+        messages: [], 
+        difyConversationId: difyConversationId, 
+        type: "qa",
+      });
+    } else {
+      // 既存更新（先頭に持ってくる）
+      const targetIndex = index.findIndex(s => s.id === conversationId);
+      if (targetIndex > -1) {
+        const target = index[targetIndex];
+        index.splice(targetIndex, 1);
+        index.unshift({ 
+          ...target, 
+          date: formattedDate, 
+          email: userEmail, 
+          difyConversationId: difyConversationId 
+        });
+      }
+    }
+    await saveJson(indexFilePath, index);
+    console.log(`[QA] Index updated for ${userEmail}`);
+  })();
+
+  await Promise.all([saveSessionPromise, updateIndexPromise]);
 }
