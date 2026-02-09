@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { verifyIdToken } from "@/lib/auth/jwt";
 
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || "taska_session";
 
@@ -22,7 +22,8 @@ export async function proxy(req: NextRequest) {
   }
 
   try {
-    const claims = await verifyAccessToken(token);
+    const claims = await verifyIdToken(token);
+
     const groups = (claims["cognito:groups"] ?? []) as string[];
 
     if (pathname.startsWith("/admin") && !groups.includes("Admin")) {
