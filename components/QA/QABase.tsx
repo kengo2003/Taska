@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Upload, Send, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,24 +25,43 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const formatDate = (date: Date) =>
-  `${date.getFullYear()}/${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
-
 export default function QABase() {
   // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // ★修正: 画面サイズ監視のロジック改善
   useEffect(() => {
+    const checkMobile = () => window.innerWidth < 768;
+
+    // 初期化時の設定
+    const initialMobile = checkMobile();
+    setIsMobile(initialMobile);
+    if (!initialMobile) {
+      setIsSidebarOpen(true);
+    } else {
+      setIsSidebarOpen(false);
+    }
+
+    let prevIsMobile = initialMobile;
+
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
+      const currentIsMobile = checkMobile();
+      setIsMobile(currentIsMobile);
+
+      // モバイル⇄PCの状態が切り替わった時だけ処理
+      if (currentIsMobile !== prevIsMobile) {
+        if (!currentIsMobile) {
+          setIsSidebarOpen(true);
+        } else {
+          setIsSidebarOpen(false);
+        }
+        prevIsMobile = currentIsMobile;
       }
     };
-    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const [input, setInput] = useState("");
@@ -68,22 +87,38 @@ export default function QABase() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await fetch("/api/history?type=qa");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
+  // 履歴の表示件数制御
+  const [historyLimit, setHistoryLimit] = useState(5);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/history?type=qa&limit=${historyLimit + 1}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          
+          if (data.length > historyLimit) {
+            setHasMoreHistory(true);
+            setSessions(data.slice(0, historyLimit));
+          } else {
+            setHasMoreHistory(false);
             setSessions(data);
           }
         }
-      } catch (error) {
-        console.error("Failed to load history:", error);
       }
-    };
-    fetchSessions();
-  }, []);
+    } catch (error) {
+      console.error("Failed to load history:", error);
+    }
+  }, [historyLimit]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleLoadMore = () => {
+    setHistoryLimit((prev) => prev + 5);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,7 +147,7 @@ export default function QABase() {
     ]);
     setSelectedFiles([]);
     setInput("");
-    if (window.innerWidth < 768) setIsSidebarOpen(false);
+    if (isMobile) setIsSidebarOpen(false);
   };
 
   const loadSession = async (session: ChatSession) => {
@@ -121,7 +156,7 @@ export default function QABase() {
     setCurrentSessionId(session.id);
     setMessages([]);
     setIsLoading(true);
-    if (window.innerWidth < 768) setIsSidebarOpen(false);
+    if (isMobile) setIsSidebarOpen(false);
 
     try {
       const res = await fetch(`/api/history/${session.id}`);
@@ -210,7 +245,6 @@ export default function QABase() {
     try {
       const formData = new FormData();
       formData.append("query", messageToSend);
-      formData.append("user", "client-user-qa");
 
       if (difyConversationId) {
         formData.append("dify_conversation_id", difyConversationId);
@@ -246,14 +280,7 @@ export default function QABase() {
       setMessages(finalMessages);
 
       if (!currentSessionId) {
-        const newSession: ChatSession = {
-          id: serverSessionId,
-          title: messageToSend.trim().substring(0, 20) || "Q&Aチャット",
-          date: formatDate(new Date()),
-          messages: [],
-          difyConversationId: serverDifyId,
-        };
-        setSessions([newSession, ...sessions]);
+        fetchHistory(); // 最新履歴を再取得
       }
 
     } catch (error) {
@@ -285,16 +312,16 @@ export default function QABase() {
           currentSessionId={currentSessionId}
           onNewChat={startNewChat}
           onSelectSession={loadSession}
+          hasMore={hasMoreHistory}
+          onLoadMore={handleLoadMore}
         />
       </Sidebar>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* PC用ヘッダー */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <div className="hidden md:block">
           <Header />
         </div>
 
-        {/* モバイル用ヘッダー */}
         <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <SidebarButton
@@ -327,126 +354,42 @@ export default function QABase() {
                 </p>
               </div>
 
-              {/* メッセージリスト等は既存のまま */}
               <div className="flex-1 overflow-y-auto mb-4 space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.role === "user"
-                      ? "justify-end"
-                      : "justify-start items-start gap-3"
-                      }`}
-                  >
+                  <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start items-start gap-3"}`}>
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 relative rounded-full overflow-hidden shrink-0 bg-green-100 border border-green-200">
-                        <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">
-                          Q
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-green-600 text-xs font-bold">Q</div>
                       </div>
                     )}
-                    <div
-                      className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                        ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none"
-                        : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"
-                        }`}
-                    >
-                      {/* 画像表示ロジック等は変更なし */}
+                    <div className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === "user" ? "bg-[#EBF5FF] text-gray-800 rounded-tr-none" : "bg-white border border-gray-100 text-gray-800 rounded-tl-none"}`}>
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {msg.attachments.map((att, i) =>
                             att.type === "image" ? (
-                              <div
-                                key={i}
-                                className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 w-fit cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setZoomedImage(att.url);
-                                }}
-                              >
-                                <Image
-                                  src={att.url || "/placeholder.png"}
-                                  alt="preview"
-                                  width={500}
-                                  height={500}
-                                  sizes="120px"
-                                  className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain"
-                                  unoptimized
-                                />
+                              <div key={i} className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 w-fit cursor-pointer hover:opacity-90 transition-opacity" onClick={(e) => { e.stopPropagation(); setZoomedImage(att.url); }}>
+                                <Image src={att.url || "/placeholder.png"} alt="preview" width={500} height={500} sizes="120px" className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain" unoptimized />
                               </div>
                             ) : (
-                              <a
-                                key={i}
-                                href="#"
-                                onClick={(e) =>
-                                  handleFileClick(e, att.url)
-                                }
-                                className="block hover:opacity-80 transition-opacity cursor-pointer"
-                              >
+                              <a key={i} href="#" onClick={(e) => handleFileClick(e, att.url)} className="block hover:opacity-80 transition-opacity cursor-pointer">
                                 <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
                                   <div className="w-5 h-5 text-blue-500 shrink-0" />
-                                  <span className="font-medium text-gray-700 text-xs truncate">
-                                    {att.name}
-                                  </span>
+                                  <span className="font-medium text-gray-700 text-xs truncate">{att.name}</span>
                                 </div>
                               </a>
                             ),
                           )}
                         </div>
                       )}
-
                       <div className="prose prose-sm max-w-none text-gray-800 wrap-break-word [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkBreaks]}
-                          components={{
-                            a: ({ ...props }) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              />
-                            ),
-                            p: ({ ...props }) => (
-                              <p {...props} className="mb-2 last:mb-0" />
-                            ),
-                            img: ({ ...props }) => (
-                              <span
-                                className="inline-block cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() =>
-                                  setZoomedImage(String(props.src))
-                                }
-                              >
-                                <Image
-                                  src={String(props.src)}
-                                  alt={props.alt || "image"}
-                                  width={500}
-                                  height={500}
-                                  sizes="240px"
-                                  className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
-                                  unoptimized
-                                />
-                              </span>
-                            ),
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={{ a: ({ ...props }) => (<a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />), p: ({ ...props }) => (<p {...props} className="mb-2 last:mb-0" />), img: ({ ...props }) => (<span className="inline-block cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setZoomedImage(String(props.src))}><Image src={String(props.src)} alt={props.alt || "image"} width={500} height={500} sizes="240px" className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2" unoptimized /></span>), }}>{msg.content}</ReactMarkdown>
                       </div>
                       {msg.role === "assistant" && (
-                        <FeedbackButtons
-                          messageId={`${currentSessionId || "temp"}-${idx}`}
-                          responseContent={msg.content}
-                          userPrompt={
-                            idx > 0 && messages[idx - 1].role === "user"
-                              ? messages[idx - 1].content
-                              : ""
-                          }
-                        />
+                        <FeedbackButtons messageId={`${currentSessionId || "temp"}-${idx}`} responseContent={msg.content} userPrompt={idx > 0 && messages[idx - 1].role === "user" ? messages[idx - 1].content : ""} />
                       )}
                     </div>
                   </div>
                 ))}
-
                 {isLoading && (
                   <div className="flex justify-start items-center gap-3">
                     <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse" />
@@ -456,83 +399,33 @@ export default function QABase() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 入力エリア */}
               <div className="relative w-full max-w-4xl mx-auto shrink-0 mb-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  multiple
-                  accept=".pdf,.doc,.docx,image/*"
-                />
-
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" multiple accept=".pdf,.doc,.docx,image/*" />
                 {selectedFiles.length > 0 && (
                   <div className="mb-2 flex flex-wrap gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
                     {selectedFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7"
-                      >
+                      <div key={index} className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7">
                         <div className="w-3 h-3 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">
-                          {file.name}
-                        </span>
-                        <button
-                          onClick={() => removeFile(index)}
-                          className="absolute top-1/2 -translate-y-1/2 right-1 hover:bg-gray-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3 text-gray-500" />
-                        </button>
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">{file.name}</span>
+                        <button onClick={() => removeFile(index)} className="absolute top-1/2 -translate-y-1/2 right-1 hover:bg-gray-100 rounded-full p-0.5 transition-colors"><X className="w-3 h-3 text-gray-500" /></button>
                       </div>
                     ))}
                   </div>
                 )}
-
                 <div className="relative flex items-end group">
-                  <div
-                    onClick={handleUploadClick}
-                    className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full"
-                  >
+                  <div onClick={handleUploadClick} className="absolute left-4 bottom-4 text-gray-400 group-focus-within:text-blue-500 transition-colors cursor-pointer hover:bg-gray-100 p-1 rounded-full">
                     {selectedFiles.length > 0 ? (
-                      <div className="relative">
-                        <Upload className="w-5 h-5 text-blue-500" />
-                        <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
-                          {selectedFiles.length}
-                        </span>
-                      </div>
+                      <div className="relative"><Upload className="w-5 h-5 text-blue-500" /><span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">{selectedFiles.length}</span></div>
                     ) : (
                       <Upload className="w-5 h-5" />
                     )}
                   </div>
-
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="ここに質問を入力..."
-                    disabled={isLoading}
-                    rows={1}
-                    className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed"
-                  />
-
+                  <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="ここに質問を入力..." disabled={isLoading} rows={1} className="w-full pl-12 pr-12 py-4 rounded-[28px] border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all text-gray-700 bg-white placeholder-gray-400 disabled:bg-gray-50 resize-none overflow-hidden min-h-14 leading-relaxed" />
                   <div className="absolute right-4 bottom-4 flex items-center gap-2">
                     {input || selectedFiles.length > 0 ? (
-                      <button
-                        onClick={handleSend}
-                        disabled={isLoading}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Send className="w-5 h-5" />
-                      </button>
+                      <button onClick={handleSend} disabled={isLoading} className="text-blue-600 hover:text-blue-700"><Send className="w-5 h-5" /></button>
                     ) : (
-                      <button
-                        onClick={() => setInput("")}
-                        className={`text-gray-400 ${!input && "hidden"}`}
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                      <button onClick={() => setInput("")} className={`text-gray-400 ${!input && "hidden"}`}><X className="w-5 h-5" /></button>
                     )}
                   </div>
                 </div>
@@ -542,24 +435,10 @@ export default function QABase() {
         </main>
       </div>
       {zoomedImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-200"
-          onClick={() => setZoomedImage(null)}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in duration-200" onClick={() => setZoomedImage(null)}>
           <div className="relative w-full max-w-5xl h-[85vh]">
-            <Image
-              src={zoomedImage}
-              alt="Zoomed"
-              fill
-              className="object-contain"
-              unoptimized
-            />
-            <button
-              className="absolute -top-4 -right-4 md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50"
-              onClick={() => setZoomedImage(null)}
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <Image src={zoomedImage} alt="Zoomed" fill className="object-contain" unoptimized />
+            <button className="absolute -top-4 -right-4 md:top-0 md:right-0 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-50" onClick={() => setZoomedImage(null)}><X className="w-6 h-6" /></button>
           </div>
         </div>
       )}

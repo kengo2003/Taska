@@ -43,25 +43,35 @@ export default function ChatSidebarContent({
               <div
                 key={session.id}
                 onClick={() => onSelectSession(session)}
-                className={`group relative flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                className={`group relative flex items-start gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
                   currentSessionId === session.id
                     ? "bg-blue-50 text-blue-700 font-medium shadow-sm"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <MessageSquare
-                  className={`w-4 h-4 shrink-0 ${
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
                     currentSessionId === session.id
                       ? "text-blue-500"
                       : "text-gray-400 group-hover:text-gray-500"
                   }`}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="truncate text-sm">
+                  {/* タイトル */}
+                  <div className="truncate text-sm mb-0.5 font-medium">
                     {session.title || "無題のチャット"}
                   </div>
-                  <div className="text-[10px] opacity-60 truncate">
-                    {session.date}
+                  
+                  {/* 時間とメールアドレスの表示 */}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
+                      {session.date}
+                    </div>
+                    {session.email && (
+                      <div className="text-[10px] opacity-50 truncate text-gray-400">
+                        {session.email}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
