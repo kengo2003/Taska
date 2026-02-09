@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { resetPassword, confirmResetPassword } from "aws-amplify/auth";
-import { LoginInput } from "@/components/Login/LoginInput"; // 既存のコンポーネントを再利用
+import { LoginInput } from "@/components/Login/LoginInput";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -37,7 +37,13 @@ export default function ForgotPasswordPage() {
       setMessage("認証コードを送信しました。メールを確認してください。");
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "メール送信に失敗しました。");
+      
+      // エラーメッセージの日本語化（必要に応じて追加）
+      let msg = err.message;
+      if (err.name === "UserNotFoundException") msg = "このメールアドレスは登録されていません";
+      if (err.name === "LimitExceededException") msg = "試行回数が多すぎます。しばらく待ってから再試行してください";
+
+      setError(msg || "メール送信に失敗しました。");
     } finally {
       setIsLoading(false);
     }
@@ -56,32 +62,41 @@ export default function ForgotPasswordPage() {
         newPassword: newPassword,
       });
       
+      // 成功時はアラートを出してログイン画面へ
       alert("パスワードを変更しました。新しいパスワードでログインしてください。");
-      router.push("/auth/signin"); // ログインページへ戻す（パスは適宜調整してください）
+      
+      // ▼【修正】遷移先を /login に変更しました
+      router.push("/login"); 
+      
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "変更に失敗しました。コードが正しいか確認してください。");
+      
+      let msg = err.message;
+      if (err.name === "CodeMismatchException") msg = "認証コードが間違っています";
+      if (err.name === "ExpiredCodeException") msg = "認証コードの有効期限が切れています";
+
+      setError(msg || "変更に失敗しました。コードが正しいか確認してください。");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3]">
-      {/* ロゴエリア（ログイン画面と共通） */}
-      <div className="mb-8 relative w-64 h-20">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3] p-4">
+      {/* ロゴエリア */}
+      <div className="mb-8 relative w-full max-w-[350px] h-16 md:h-20 flex justify-center">
         <Image
           src="/TaskaLogo.png"
           alt="Taska Logo"
           width={350}
           height={150}
-          className="object-contain"
+          className="object-contain w-auto h-full"
           priority
           unoptimized
         />
       </div>
 
-      <div className="w-full max-w-sm px-8">
+      <div className="w-full max-w-sm px-4 md:px-8">
         <h1 className="text-xl font-bold text-center text-gray-700 mb-6">
           {step === 1 ? "パスワード再設定" : "認証コードの入力"}
         </h1>
@@ -128,6 +143,10 @@ export default function ForgotPasswordPage() {
         {/* --- ステップ2: コード＆新パスワード入力フォーム --- */}
         {step === 2 && (
           <form onSubmit={handleResetPassword}>
+            <p className="text-sm text-gray-600 mb-6 text-center">
+              メールに届いた6桁のコードと、<br/>新しいパスワードを入力してください。
+            </p>
+
             <LoginInput
               id="code"
               type="text"
@@ -161,7 +180,7 @@ export default function ForgotPasswordPage() {
         {/* 戻るリンク */}
         <div className="mt-6 text-center">
           <Link 
-            href="/login" // ログイン画面のパスに合わせてください（/login または /auth/signin）
+            href="/login" 
             className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
           >
             ログイン画面に戻る

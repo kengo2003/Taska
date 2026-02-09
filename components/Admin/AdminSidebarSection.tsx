@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { 
   FileUp, 
   UserPlus, 
-  LayoutDashboard 
+  LayoutDashboard,
+  Trash2
 } from "lucide-react";
 
 const AdminSidebarSection = () => {
@@ -22,6 +23,11 @@ const AdminSidebarSection = () => {
       name: "利用者登録",
       href: "/admin/register",
       icon: <UserPlus className="w-5 h-5" />,
+    },
+    {
+      name: "利用者一括削除",
+      href: "/admin/delete-user", // 作成したページのパスに合わせてください
+      icon: <Trash2 className="w-5 h-5" />,
     },
   ];
 

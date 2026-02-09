@@ -8,7 +8,7 @@ import crypto from "crypto";
 const cookieName = process.env.AUTH_COOKIE_NAME || "taska_session";
 
 const isProduction = process.env.NODE_ENV === "production";
-// const secureCookie = isProduction;
+const secureCookie = isProduction;
 
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     // Cookie設定
     response.cookies.set(cookieName, accessToken, {
       httpOnly: true,
-      secure: false, // false ならlocalhostでも保存されます
+      secure: secureCookie, // httpならfalse
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60,
