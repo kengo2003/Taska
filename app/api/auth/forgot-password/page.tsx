@@ -4,13 +4,12 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { resetPassword, confirmResetPassword } from "aws-amplify/auth";
 import { LoginInput } from "@/components/Login/LoginInput";
+// Amplifyのインポートは削除
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
 
-  // 状態管理: step 1 = メール入力, step 2 = コードと新パスワード入力
   const [step, setStep] = useState<1 | 2>(1);
   
   const [email, setEmail] = useState("");
@@ -20,7 +19,7 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ステップ1: 認証コードを送信する処理
+  // ステップ1: API経由でコード送信
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -32,50 +31,59 @@ export default function ForgotPasswordPage() {
         throw new Error("学校のメールアドレス（@hcs.ac.jp）を入力してください");
       }
 
-      await resetPassword({ username: email });
+      // 修正: バックエンドAPIを呼び出し
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "送信に失敗しました");
+      }
+
       setStep(2);
       setMessage("認証コードを送信しました。メールを確認してください。");
     } catch (err: any) {
       console.error(err);
-      
-      // エラーメッセージの日本語化（必要に応じて追加）
-      let msg = err.message;
-      if (err.name === "UserNotFoundException") msg = "このメールアドレスは登録されていません";
-      if (err.name === "LimitExceededException") msg = "試行回数が多すぎます。しばらく待ってから再試行してください";
-
-      setError(msg || "メール送信に失敗しました。");
+      setError(err.message || "メール送信に失敗しました。");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ステップ2: 新しいパスワードを確定する処理
+  // ステップ2: API経由でパスワード変更
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      await confirmResetPassword({
-        username: email,
-        confirmationCode: code,
-        newPassword: newPassword,
+      // 修正: バックエンドAPIを呼び出し
+      const res = await fetch("/api/auth/confirm-forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          code,
+          newPassword,
+        }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "変更に失敗しました");
+      }
       
-      // 成功時はアラートを出してログイン画面へ
       alert("パスワードを変更しました。新しいパスワードでログインしてください。");
-      
-      // ▼【修正】遷移先を /login に変更しました
       router.push("/login"); 
       
     } catch (err: any) {
       console.error(err);
-      
-      let msg = err.message;
-      if (err.name === "CodeMismatchException") msg = "認証コードが間違っています";
-      if (err.name === "ExpiredCodeException") msg = "認証コードの有効期限が切れています";
-
-      setError(msg || "変更に失敗しました。コードが正しいか確認してください。");
+      setError(err.message || "変更に失敗しました。コードが正しいか確認してください。");
     } finally {
       setIsLoading(false);
     }
