@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
     response.cookies.set(cookieName, idToken, {
       httpOnly: true,
-      secure: false, // httpならfalse
+      secure: secureCookie, // httpならfalse
       sameSite: "lax",
       path: "/",
       maxAge: expiresIn, // id tokenの有効期限に合わせる
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     if (accessToken) {
       response.cookies.set(accessCookieName, accessToken, {
         httpOnly: true,
-        secure: false, // httpならfalse
+        secure: secureCookie, // httpならfalse
         sameSite: "lax",
         path: "/",
         maxAge: expiresIn,
@@ -84,15 +84,22 @@ export async function POST(req: Request) {
     }
 
     return response;
-  } catch (e: any) {
+  } catch (e: unknown) {
+    let errorName = "unknown";
+    let errorMessage = "unknown";
+
+    if (e instanceof Error) {
+      errorName = e.name;
+      errorMessage = e.message;
+    }
+
     console.error("Cognito auth error:", {
-      name: e?.name,
-      message: e?.message,
-      $metadata: e?.$metadata,
+      name: errorName,
+      message: errorMessage,
     });
 
     return NextResponse.json(
-      { error: "auth_failed", detail: e?.name ?? "unknown" },
+      { error: "auth_failed", detail: errorName },
       { status: 401 },
     );
   }
