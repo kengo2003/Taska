@@ -293,25 +293,24 @@ export default function QABase() {
           <Header />
         </div>
 
-        {/* ▼▼▼ 追加: モバイル用ヘッダー (固定) ▼▼▼ */}
-        <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
-           <div className="flex items-center gap-3">
-             <SidebarButton 
-               isOpen={isSidebarOpen} 
-               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-             />
-             <Link href={"/"}>
-               <div className="relative w-24 h-8">
-                 <Image
-                   src="/TaskaLogo.png"
-                   alt="Logo"
-                   fill
-                   className="object-contain"
-                   unoptimized
-                 />
-               </div>
-             </Link>
-           </div>
+        <div className="md:hidden fixed top-0 left-0 w-full z-30 flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0">
+          <div className="flex items-center gap-3">
+            <SidebarButton
+              isOpen={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+            <Link href={"/"}>
+              <div className="relative w-24 h-8">
+                <Image
+                  src="/TaskaLogo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </Link>
+          </div>
         </div>
 
         <main className="flex-1 flex overflow-hidden relative bg-white">

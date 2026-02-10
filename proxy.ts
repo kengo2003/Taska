@@ -8,8 +8,10 @@ export async function proxy(req: NextRequest) {
 
   const publicPaths = [
     "/login",                
-    "/api/auth/forgot-password", 
-    "/TaskaLogo.png",        
+    "/auth/forgot-password", 
+    "/TaskaLogo.png",
+    "/api/auth/forgot-password",
+    "/api/auth/confirm-forgot-password",      
   ];
 
   if (publicPaths.some((path) => pathname.startsWith(path))) {
