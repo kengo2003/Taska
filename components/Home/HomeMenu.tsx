@@ -48,7 +48,7 @@ const HomeMenu = () => {
       />
       <MenuButton
         text="学校Q&A"
-        link="/q&a"
+        link="/qa"
         className="w-full bg-linear-to-b from-[#2978B2] to-[#12334C]"
       />
       
