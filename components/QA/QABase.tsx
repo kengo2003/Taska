@@ -364,7 +364,7 @@ export default function QABase() {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full">
+    <div className="flex min-h-dvh w-full">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
         <ChatSidebarContent
           sessions={sessions}
@@ -503,7 +503,7 @@ export default function QABase() {
                                   width={500}
                                   height={500}
                                   sizes="240px"
-                                  className="w-auto h-auto max-w-[240px] max-h-[240px] object-contain rounded-lg border border-gray-200 my-2"
+                                  className="w-auto h-auto max-w-60 max-h-60 object-contain rounded-lg border border-gray-200 my-2"
                                   unoptimized
                                 />
                               </span>

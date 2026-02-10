@@ -84,15 +84,22 @@ export async function POST(req: Request) {
     }
 
     return response;
-  } catch (e: any) {
+  } catch (e: unknown) {
+    let errorName = "unknown";
+    let errorMessage = "unknown";
+
+    if (e instanceof Error) {
+      errorName = e.name;
+      errorMessage = e.message;
+    }
+
     console.error("Cognito auth error:", {
-      name: e?.name,
-      message: e?.message,
-      $metadata: e?.$metadata,
+      name: errorName,
+      message: errorMessage,
     });
 
     return NextResponse.json(
-      { error: "auth_failed", detail: e?.name ?? "unknown" },
+      { error: "auth_failed", detail: errorName },
       { status: 401 },
     );
   }
