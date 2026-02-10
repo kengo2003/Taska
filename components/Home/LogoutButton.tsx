@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { MdOutlineLogout } from "react-icons/md";
 
 const LogoutButton = () => {
   const router = useRouter();
@@ -14,13 +15,10 @@ const LogoutButton = () => {
 
   return (
     <button onClick={handleLogout} aria-label="logout">
-      <Image
-        alt="logout"
-        src="/Logout.png"
+      <MdOutlineLogout
         width={40}
         height={40}
         className="w-6 h-6 cursor-pointer hover:opacity-70"
-        unoptimized
       />
     </button>
   );
