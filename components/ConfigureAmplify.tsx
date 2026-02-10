@@ -1,8 +1,12 @@
 "use client";
-
 import { Amplify } from "aws-amplify";
 
-// Amplifyの設定
+// ▼ 追加: コンソールで値を確認する
+console.log("Amplify Config:", {
+  PoolID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+  ForgotID: process.env.NEXT_PUBLIC_COGNITO_CLIENT_FORGOT_ID, // ←ここがundefinedだとエラーになる
+});
+
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -13,5 +17,5 @@ Amplify.configure({
 });
 
 export default function ConfigureAmplify() {
-  return null; // UIには何も表示しない
+  return null;
 }
