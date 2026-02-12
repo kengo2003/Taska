@@ -67,11 +67,6 @@ export default function ChatSidebarContent({
                     <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
                       {session.date}
                     </div>
-                    {session.email && (
-                      <div className="text-[10px] opacity-50 truncate text-gray-400">
-                        {session.email}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

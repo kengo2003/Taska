@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3, BUCKET_NAME, fetchJson, saveJson } from "@/lib/s3-db";
 import { verifyIdToken } from "@/lib/auth/jwt";
+import { getCurrentJSTTime } from "@/lib/utils"; // ★追加: JST時刻取得関数のインポート
 import {
   ChatSession,
   Message,
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
           })();
 
           // 両方の完了を待つ
-          const [_, uploadData] = await Promise.all([
+          const [, uploadData] = await Promise.all([
             s3Promise,
             difyUploadPromise,
           ]);
@@ -204,8 +205,8 @@ export async function POST(request: Request) {
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
 
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    // ★修正: 手動の日付生成を削除し、utilのJST生成関数を使用
+    const formattedDate = getCurrentJSTTime();
 
     // A. 並列処理の準備: 保存処理を関数化
     const saveSessionPromise = (async () => {
@@ -224,13 +225,13 @@ export async function POST(request: Request) {
         role: "user",
         content: query,
         attachments: localAttachments,
-        date: formattedDate,
+        date: formattedDate, // JST
       });
       sessionData.messages.push({
         role: "assistant",
         content: data.answer,
         attachments: [],
-        date: formattedDate,
+        date: formattedDate, // JST
       });
 
       await saveJson(sessionFilePath, {
@@ -239,6 +240,7 @@ export async function POST(request: Request) {
         type: "qa",
         id: conversationId,
         email: userEmail,
+        date: formattedDate, // JST (セッション自体の更新日時)
       });
       console.log(
         `[QA] Session saved: ${sessionFilePath} (User: ${userEmail})`,
@@ -252,7 +254,7 @@ export async function POST(request: Request) {
         index.unshift({
           id: conversationId,
           title: query.substring(0, 20) || "QAチャット",
-          date: formattedDate,
+          date: formattedDate, // JST
           email: userEmail,
           messages: [],
           difyConversationId: newDifyConversationId,
@@ -265,7 +267,7 @@ export async function POST(request: Request) {
           index.splice(targetIndex, 1);
           index.unshift({
             ...target,
-            date: formattedDate,
+            date: formattedDate, // JST
             email: userEmail,
             difyConversationId: newDifyConversationId,
           });

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { fetchJson } from "@/lib/s3-db";
 import { verifyIdToken } from "@/lib/auth/jwt";
 import { ChatSession } from "@/types/type";
+import { getCurrentJSTTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,14 @@ export async function GET(request: Request) {
 
     const limitedHistory = filteredHistory.slice(0, limit);
 
-    return NextResponse.json(limitedHistory);
+    // ★追加: データをクライアントに返す前に、日付をJSTに変換する
+    const formattedHistory = limitedHistory.map((session) => ({
+      ...session,
+      // session.date が UTC等の文字列でも、ここで "YYYY/MM/DD HH:mm" (JST) に変換されます
+      date: getCurrentJSTTime(session.date),
+    }));
+
+    return NextResponse.json(formattedHistory);
   } catch (error) {
     console.error("History API Error:", error);
     return NextResponse.json(

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3, BUCKET_NAME, fetchJson, saveJson } from "@/lib/s3-db";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { verifyAccessToken, verifyIdToken } from "@/lib/auth/jwt";
+import { getCurrentJSTTime } from "@/lib/utils";
 import {
   ChatSession,
   Message,
@@ -25,12 +26,25 @@ export async function POST(request: Request) {
     let userEmail: string = "";
 
     try {
+      // まずアクセストークンとして検証を試みる
       const claims = await verifyAccessToken(token);
       userId = claims.sub as string;
       userEmail = (claims.email as string) || "unknown";
-    } catch (e) {
-      console.error("Token verification failed:", e);
-      return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+    } catch (e: any) {
+      if (e.message === "Invalid token_use. Expected access token.") {
+        try {
+          const claims = await verifyIdToken(token);
+          userId = claims.sub as string;
+          userEmail = (claims.email as string) || "unknown";
+        } catch (idError) {
+          console.error("Token verification failed (ID Token):", idError);
+          return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+        }
+      } else {
+        // その他のエラー（期限切れなど）
+        console.error("Token verification failed (Access Token):", e);
+        return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+      }
     }
 
     // 2. リクエストデータの取得
@@ -65,7 +79,6 @@ export async function POST(request: Request) {
     if (files && files.length > 0) {
       console.log(`[Chat] Processing ${files.length} files concurrently for ${userEmail}`);
 
-      // ★修正: map と Promise.all で並列処理
       const uploadPromises = files.map(async (file) => {
         if (file.size === 0) return null;
         try {
@@ -93,7 +106,7 @@ export async function POST(request: Request) {
           })();
 
           // 両方の完了を待つ
-          const [_, uploadData] = await Promise.all([s3Promise, difyUploadPromise]);
+          const [, uploadData] = await Promise.all([s3Promise, difyUploadPromise]);
 
           return {
             local: {
@@ -156,18 +169,33 @@ export async function POST(request: Request) {
     // ----------------------------------------------------------------
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    // ★修正: JST形式の日付文字列を生成
+    // 以前の new Date() ... の手動整形を削除し、utilの関数を使用
+    const formattedDate = getCurrentJSTTime(); 
 
-    // A. 並列処理の準備: 保存処理を関数化またはPromise化
     const saveSessionPromise = (async () => {
       let sessionData: { messages: Message[]; email?: string } = { messages: [] };
       if (!isNewSession) {
         const existing = await fetchJson<{ messages: Message[]; email?: string }>(sessionFilePath);
         if (existing) sessionData = existing;
       }
-      sessionData.messages.push({ role: "user", content: query, attachments: localAttachments, date: formattedDate });
-      sessionData.messages.push({ role: "assistant", content: data.answer, attachments: [], date: formattedDate });
+      
+      // ユーザーメッセージ保存
+      sessionData.messages.push({ 
+        role: "user", 
+        content: query, 
+        attachments: localAttachments, 
+        date: formattedDate // JST
+      });
+      
+      // アシスタントメッセージ保存
+      sessionData.messages.push({ 
+        role: "assistant", 
+        content: data.answer, 
+        attachments: [], 
+        date: formattedDate // JST
+      });
 
       await saveJson(sessionFilePath, {
         messages: sessionData.messages,
@@ -175,6 +203,7 @@ export async function POST(request: Request) {
         id: conversationId,
         type: "resume",
         email: userEmail,
+        date: formattedDate, // セッション自体の更新日時も追加しておくと便利
       });
       console.log(`[Chat] Session saved: ${sessionFilePath}`);
     })();
@@ -182,16 +211,28 @@ export async function POST(request: Request) {
     const saveIndexPromise = (async () => {
       const index = (await fetchJson<ChatSession[]>(indexFilePath)) || [];
       if (isNewSession) {
+        // 新規追加
         index.unshift({
-          id: conversationId, title: query.substring(0, 20) || "新しいチャット", date: formattedDate,
-          email: userEmail, messages: [], difyConversationId: newDifyConversationId, type: "resume",
+          id: conversationId, 
+          title: query.substring(0, 20) || "新しいチャット", 
+          date: formattedDate, // JST
+          email: userEmail, 
+          messages: [], 
+          difyConversationId: newDifyConversationId, 
+          type: "resume",
         });
       } else {
+        // 既存更新（先頭へ移動）
         const targetIndex = index.findIndex(s => s.id === conversationId);
         if (targetIndex > -1) {
           const target = index[targetIndex];
           index.splice(targetIndex, 1);
-          index.unshift({ ...target, date: formattedDate, email: userEmail, difyConversationId: newDifyConversationId });
+          index.unshift({ 
+            ...target, 
+            date: formattedDate, // JST更新
+            email: userEmail, 
+            difyConversationId: newDifyConversationId 
+          });
         }
       }
       await saveJson(indexFilePath, index);
