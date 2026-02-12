@@ -170,8 +170,6 @@ export async function POST(request: Request) {
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
     
-    // ★修正: JST形式の日付文字列を生成
-    // 以前の new Date() ... の手動整形を削除し、utilの関数を使用
     const formattedDate = getCurrentJSTTime(); 
 
     const saveSessionPromise = (async () => {

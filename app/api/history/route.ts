@@ -43,7 +43,6 @@ export async function GET(request: Request) {
 
     const limitedHistory = filteredHistory.slice(0, limit);
 
-    // ★追加: データをクライアントに返す前に、日付をJSTに変換する
     const formattedHistory = limitedHistory.map((session) => ({
       ...session,
       // session.date が UTC等の文字列でも、ここで "YYYY/MM/DD HH:mm" (JST) に変換されます

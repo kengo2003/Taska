@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3, BUCKET_NAME, fetchJson, saveJson } from "@/lib/s3-db";
 import { verifyIdToken } from "@/lib/auth/jwt";
-import { getCurrentJSTTime } from "@/lib/utils"; // ★追加: JST時刻取得関数のインポート
+import { getCurrentJSTTime } from "@/lib/utils";
 import {
   ChatSession,
   Message,
@@ -93,7 +93,6 @@ export async function POST(request: Request) {
         `[QA] Processing ${files.length} files concurrently for ${userEmail}`,
       );
 
-      // ★修正: map と Promise.all で並列処理
       const uploadPromises = files.map(async (file) => {
         if (file.size === 0) return null;
         try {
@@ -205,7 +204,6 @@ export async function POST(request: Request) {
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
 
-    // ★修正: 手動の日付生成を削除し、utilのJST生成関数を使用
     const formattedDate = getCurrentJSTTime();
 
     // A. 並列処理の準備: 保存処理を関数化

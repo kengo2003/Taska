@@ -49,7 +49,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // ★修正: 画面サイズ監視のロジック改善
   useEffect(() => {
     const checkMobile = () => window.innerWidth < 768;
 
@@ -68,8 +67,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       const currentIsMobile = checkMobile();
       setIsMobile(currentIsMobile);
 
-      // ★重要: モバイル⇄PCの状態が切り替わった時だけサイドバーの状態を変更する
-      // これにより、PCモードで手動で閉じた後にリサイズイベントが走っても勝手に開かなくなる
       if (currentIsMobile !== prevIsMobile) {
         if (!currentIsMobile) {
           setIsSidebarOpen(true); // モバイル→PCになったら開く
