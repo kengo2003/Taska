@@ -29,7 +29,6 @@ import Title from "../common/Title";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
-// ヘルパー関数
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -49,16 +48,32 @@ interface ChatBaseProps {
 }
 
 export default function ChatBase({ mode }: ChatBaseProps) {
-  // ▼▼▼ 追加: サイドバーの開閉状態管理 ▼▼▼
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // ▼▼▼ 追加: 画面サイズに応じた初期化 ▼▼▼
   useEffect(() => {
+    const checkMobile = () => window.innerWidth < 768;
+
+    const initialMobile = checkMobile();
+    setIsMobile(initialMobile);
+    if (!initialMobile) {
+      setIsSidebarOpen(true);
+    } else {
+      setIsSidebarOpen(false);
+    }
+
+    let prevIsMobile = initialMobile;
+
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
+      const currentIsMobile = checkMobile();
+      setIsMobile(currentIsMobile);
+
+      if (currentIsMobile !== prevIsMobile) {
+        if (!currentIsMobile) {
+          setIsSidebarOpen(true);
+        } else {
+          setIsSidebarOpen(false);
+        }
+        prevIsMobile = currentIsMobile;
       }
     };
     handleResize();
@@ -70,6 +85,9 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
+
+  const [historyLimit, setHistoryLimit] = useState(5);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -85,13 +103,19 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 初期化時に履歴一覧を取得 (Refresh対策)
-  useEffect(() => {
-    const fetchHistoryIndex = async () => {
-      try {
-        const res = await fetch("/api/history?type=resume");
-        if (res.ok) {
-          const data = await res.json();
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/history?type=resume&limit=${historyLimit + 1}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+
+        if (data.length > historyLimit) {
+          setHasMoreHistory(true);
+          setSessions(data.slice(0, historyLimit));
+        } else {
+          setHasMoreHistory(false);
           setSessions(data);
         }
       } catch (e) {

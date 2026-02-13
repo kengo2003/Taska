@@ -4,7 +4,6 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 
-// 環境変数からS3クライアントを初期化
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -15,21 +14,19 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = process.env.AWS_BUCKET_NAME!;
 
-// JSONデータを取得する関数
 export async function fetchJson<T>(key: string): Promise<T | null> {
   try {
     const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key });
     const response = await s3.send(command);
     const str = await response.Body?.transformToString();
     return str ? JSON.parse(str) : null;
-  } catch (e: any) {
-    if (e.name === "NoSuchKey") return null; // ファイルがない場合はnullを返す
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "NoSuchKey") return null;
     throw e;
   }
 }
 
-// JSONデータを保存する関数
-export async function saveJson(key: string, data: any) {
+export async function saveJson<T>(key: string, data: T) {
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,

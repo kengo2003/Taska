@@ -5,7 +5,6 @@ import { verifyIdToken } from "@/lib/auth/jwt";
 
 export const dynamic = "force-dynamic";
 
-// --- GET: 履歴の詳細取得 ---
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -46,7 +45,6 @@ export async function GET(
 
     const filePath = `users/${userId}/chat/sessions/${id}.json`;
 
-    // 詳細データの取得
     const history = await fetchJson(filePath);
 
     if (!history) {

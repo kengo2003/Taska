@@ -24,9 +24,6 @@ function formatBytes(bytes: number, decimals = 1) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-/**
- * ナレッジベース一覧取得
- */
 export async function getKnowledgeBases() {
   if (!BASE_URL) throw new Error("BACKEND_API_URL is not defined");
 
@@ -55,20 +52,16 @@ export async function getKnowledgeBases() {
   }
 }
 
-/**
- * 特定のナレッジベースIDに紐づくドキュメント一覧を取得・整形する
- */
 export async function getDocumentsByKbId(kbId: string): Promise<FileData[]> {
   if (!BASE_URL) throw new Error("BACKEND_API_URL is not defined");
 
   try {
-    // ドキュメント一覧を取得
     const listRes = await fetch(
       `${BASE_URL}/v1/datasets/${kbId}/documents?limit=100`,
       {
         cache: "no-store",
         headers: getHeaders(),
-      }
+      },
     );
 
     if (!listRes.ok) throw new Error("ドキュメント一覧の取得に失敗しました");
@@ -112,7 +105,7 @@ export async function deleteDocuments(kbId: string, fileId: string) {
         method: "DELETE",
         cache: "no-store",
         headers: getHeaders(),
-      }
+      },
     );
     if (!res.ok) {
       const errorText = await res.text();
@@ -128,9 +121,9 @@ export async function deleteDocuments(kbId: string, fileId: string) {
 const ERROR_MESSAGES: Record<string, string> = {
   no_file_uploaded: "ファイルをアップロードしてください。",
   too_many_files: "一度にアップロードできるファイルは1つだけです。",
-  file_too_large: "ファイルサイズが制限を超えています。", // 413
+  file_too_large: "ファイルサイズが制限を超えています。",
   unsupported_file_type:
-    "サポートされていないファイル形式です (pdf, txt, md, html, xlsx, docx, csv)。", // 415
+    "サポートされていないファイル形式です (pdf, txt, md, html, xlsx, docx, csv)。",
   high_quality_dataset_only:
     "この操作は「高品質」設定のナレッジベースのみ対応しています。",
   dataset_not_initialized:
@@ -145,7 +138,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export async function uploadDocuments(
   prevState: UploadState,
-  formData: FormData
+  formData: FormData,
 ): Promise<UploadState> {
   const file = formData.get("file") as File;
   const kbId = formData.get("datasetId") as string;

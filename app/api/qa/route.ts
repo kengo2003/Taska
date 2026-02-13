@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3, BUCKET_NAME, fetchJson, saveJson } from "@/lib/s3-db";
 import { verifyIdToken } from "@/lib/auth/jwt";
+import { getCurrentJSTTime } from "@/lib/utils";
 import {
   ChatSession,
   Message,
@@ -16,9 +17,6 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    // ----------------------------------------------------------------
-    // 1. ユーザー認証 & メアド取得
-    // ----------------------------------------------------------------
     const cookieStore = await cookies();
     const token = cookieStore.get(
       process.env.AUTH_COOKIE_NAME || "taska_session",
@@ -39,7 +37,6 @@ export async function POST(request: Request) {
       userId = claims.sub as string;
       userEmail = (claims.email as string) || "unknown";
 
-      // ログ: 認証成功
       console.log(`[QA] Auth Success - User: ${userEmail} (ID: ${userId})`);
     } catch (e) {
       console.error("Token verification failed:", e);
@@ -49,9 +46,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // ----------------------------------------------------------------
-    // 2. リクエストデータの取得
-    // ----------------------------------------------------------------
     const formData = await request.formData();
     const query = formData.get("query") as string;
     let conversationId = formData.get("conversation_id") as string;
@@ -60,7 +54,6 @@ export async function POST(request: Request) {
     ) as string;
     const files = formData.getAll("file") as File[];
 
-    // QA用のAPIキーを使用
     const apiKey = process.env.DIFY_QA_API_KEY;
     const apiUrl = process.env.DIFY_API_URL?.replace(/\/$/, "");
 
@@ -81,9 +74,6 @@ export async function POST(request: Request) {
       console.log(`[QA] Existing Session: ${conversationId} by ${userEmail}`);
     }
 
-    // ----------------------------------------------------------------
-    // 3. ファイル処理（並列化による高速化 - 既存ロジック維持）
-    // ----------------------------------------------------------------
     const difyFiles: DifyFile[] = [];
     const localAttachments: LocalAttachment[] = [];
 
@@ -98,7 +88,6 @@ export async function POST(request: Request) {
           const buffer = Buffer.from(await file.arrayBuffer());
           const fileKey = `users/${userId}/uploads/${conversationId}/${Date.now()}_${file.name}`;
 
-          // S3アップロードとDifyアップロードを同時に開始
           const s3Promise = s3.send(
             new PutObjectCommand({
               Bucket: BUCKET_NAME,
@@ -124,8 +113,7 @@ export async function POST(request: Request) {
             return res.json() as Promise<UploadResponse>;
           })();
 
-          // 両方の完了を待つ
-          const [_, uploadData] = await Promise.all([
+          const [, uploadData] = await Promise.all([
             s3Promise,
             difyUploadPromise,
           ]);
@@ -158,9 +146,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // ----------------------------------------------------------------
-    // 4. Difyへ送信 (★Streamingモードに変更)
-    // ----------------------------------------------------------------
     const chatPayload: ChatPayload = {
       inputs: {},
       query: query || "",
@@ -187,9 +172,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errText }, { status: chatRes.status });
     }
 
-    const data = (await chatRes.json()) as any;
+    const data = await chatRes.json();
 
-    // URL Proxy処理
     if (data.answer && typeof data.answer === "string") {
       data.answer = data.answer
         .replace(/https?:\/\/[^)]+\/v1\/files\//g, "/files/")
@@ -197,16 +181,11 @@ export async function POST(request: Request) {
     }
     const newDifyConversationId = data.conversation_id;
 
-    // ----------------------------------------------------------------
-    // 5. ストリーミングレスポンスの作成とS3保存
-    // ----------------------------------------------------------------
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
 
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const formattedDate = getCurrentJSTTime();
 
-    // A. 並列処理の準備: 保存処理を関数化
     const saveSessionPromise = (async () => {
       let sessionData: { messages: Message[]; email?: string } = {
         messages: [],
@@ -238,6 +217,7 @@ export async function POST(request: Request) {
         type: "qa",
         id: conversationId,
         email: userEmail,
+        date: formattedDate,
       });
       console.log(
         `[QA] Session saved: ${sessionFilePath} (User: ${userEmail})`,

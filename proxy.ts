@@ -10,6 +10,7 @@ export async function proxy(req: NextRequest) {
     "/login",                
     "/auth/forgot-password", 
     "/TaskaLogo.png",
+    "/Taska.ico",
     "/api/auth/forgot-password",
     "/api/auth/confirm-forgot-password",      
   ];

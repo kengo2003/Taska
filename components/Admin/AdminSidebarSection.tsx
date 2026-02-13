@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  FileUp, 
-  UserPlus, 
-  LayoutDashboard,
-  Trash2
-} from "lucide-react";
+import { FileUp, UserPlus, LayoutDashboard, Trash2 } from "lucide-react";
 
 const AdminSidebarSection = () => {
   const pathname = usePathname();
 
-  // メニュー項目の定義
   const menuItems = [
     {
       name: "ファイルアップロード",
@@ -26,15 +20,13 @@ const AdminSidebarSection = () => {
     },
     {
       name: "利用者一括削除",
-      href: "/admin/delete-user", // 作成したページのパスに合わせてください
+      href: "/admin/delete-user",
       icon: <Trash2 className="w-5 h-5" />,
     },
   ];
 
   return (
     <div className="flex flex-col h-full w-full">
-      
-      {/* ヘッダーエリア */}
       <div className="p-4 shrink-0">
         <div className="flex items-center gap-2 px-2 py-2 mb-2 text-gray-700">
           <LayoutDashboard className="w-5 h-5" />
@@ -42,12 +34,11 @@ const AdminSidebarSection = () => {
         </div>
       </div>
 
-      {/* メニューリストエリア (flex-1 で残り領域を埋めてスクロール可能に) */}
       <div className="flex-1 overflow-y-auto px-3 pb-4">
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
-            
+
             return (
               <Link
                 key={item.href}

@@ -3,12 +3,12 @@ import { cookies } from "next/headers";
 import { fetchJson } from "@/lib/s3-db";
 import { verifyIdToken } from "@/lib/auth/jwt";
 import { ChatSession } from "@/types/type";
+import { getCurrentJSTTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    // 1) 認証（ID token）
     const cookieStore = await cookies();
     const token = cookieStore.get(
       process.env.AUTH_COOKIE_NAME || "taska_session",
@@ -26,13 +26,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // 2) パラメータ
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) : 5;
     const type = searchParams.get("type");
 
-    // 3) S3取得
     const indexFilePath = `users/${userId}/chat/index.json`;
     const historyIndex = (await fetchJson<ChatSession[]>(indexFilePath)) || [];
 
@@ -42,7 +40,12 @@ export async function GET(request: Request) {
 
     const limitedHistory = filteredHistory.slice(0, limit);
 
-    return NextResponse.json(limitedHistory);
+    const formattedHistory = limitedHistory.map((session) => ({
+      ...session,
+      date: getCurrentJSTTime(session.date),
+    }));
+
+    return NextResponse.json(formattedHistory);
   } catch (error) {
     console.error("History API Error:", error);
     return NextResponse.json(
