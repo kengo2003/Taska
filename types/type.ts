@@ -30,36 +30,36 @@ export interface KnowledgeBaseOption {
   label: string;
 }
 
-export type UploadState = {
+export interface UploadState {
   success: boolean;
   message: string;
   data?: JSON;
-};
+}
 
-export type MessageAttachment = {
+export interface MessageAttachment {
   name: string;
   url: string;
   type: "image" | "file";
-};
+}
 
 export type LocalAttachment = MessageAttachment;
 
-export type Message = {
-  role: "user" | "assistant" | "system"; // systemを追加
+export interface Message {
+  role: "user" | "assistant" | "system";
   content: string;
   date?: string;
   attachments?: MessageAttachment[];
-};
+}
 
-export type ChatSession = {
+export interface ChatSession {
   id: string;
   title: string;
-  date: string; // セッションの最終更新日時
+  date: string;
   email?: string;
   messages: Message[];
-  difyConversationId?: string; // 互換性のためオプショナル推奨
+  difyConversationId?: string;
   type?: "qa" | "resume";
-};
+}
 
 export interface MenuButtonProps {
   text: string;

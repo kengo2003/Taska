@@ -30,7 +30,6 @@ import FeedbackButtons from "./FeedbackButtons";
 
 export type ChatMode = "analysis" | "create" | "critique";
 
-// ヘルパー関数
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -45,20 +44,18 @@ interface ChatBaseProps {
 }
 
 export default function ChatBase({ mode }: ChatBaseProps) {
-  // サイドバーの開閉状態管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => window.innerWidth < 768;
 
-    // 初期化時の設定
     const initialMobile = checkMobile();
     setIsMobile(initialMobile);
     if (!initialMobile) {
-      setIsSidebarOpen(true); // PCなら初期は開く
+      setIsSidebarOpen(true);
     } else {
-      setIsSidebarOpen(false); // モバイルなら初期は閉じる
+      setIsSidebarOpen(false);
     }
 
     let prevIsMobile = initialMobile;
@@ -69,9 +66,9 @@ export default function ChatBase({ mode }: ChatBaseProps) {
 
       if (currentIsMobile !== prevIsMobile) {
         if (!currentIsMobile) {
-          setIsSidebarOpen(true); // モバイル→PCになったら開く
+          setIsSidebarOpen(true);
         } else {
-          setIsSidebarOpen(false); // PC→モバイルになったら閉じる
+          setIsSidebarOpen(false);
         }
         prevIsMobile = currentIsMobile;
       }
@@ -88,7 +85,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
 
-  // 履歴の表示件数制御
   const [historyLimit, setHistoryLimit] = useState(5);
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
@@ -106,7 +102,6 @@ export default function ChatBase({ mode }: ChatBaseProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 履歴一覧を取得
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(

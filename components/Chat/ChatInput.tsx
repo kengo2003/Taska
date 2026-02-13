@@ -50,7 +50,6 @@ export const ChatInput = ({
         accept=".pdf,.doc,.docx,image/*"
       />
 
-      {/* ファイルリスト表示 */}
       {selectedFiles.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
           {selectedFiles.map((file, index) => (
@@ -77,7 +76,6 @@ export const ChatInput = ({
         </div>
       )}
 
-      {/* 入力バー */}
       <div className="relative flex items-center group">
         <div
           onClick={handleUploadClick}

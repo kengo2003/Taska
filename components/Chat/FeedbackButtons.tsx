@@ -51,7 +51,6 @@ export default function FeedbackButtons({
 
   return (
     <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100/50 items-center">
-      {/* Goodボタン */}
       <button
         onClick={() => handleVote("good")}
         disabled={isSending}
@@ -67,7 +66,6 @@ export default function FeedbackButtons({
         />
       </button>
 
-      {/* Badボタン */}
       <button
         onClick={() => handleVote("bad")}
         disabled={isSending}

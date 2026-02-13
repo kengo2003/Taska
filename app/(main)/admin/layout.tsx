@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Header from "@/components/common/Header"; // ヘッダーをインポート
+import Header from "@/components/common/Header";
 import Sidebar from "@/components/common/Sidebar";
 import SidebarButton from "@/components/common/SidebarButton";
 import AdminSidebarSection from "@/components/Admin/AdminSidebarSection";
@@ -33,12 +33,10 @@ export default function AdminLayout({
       </Sidebar>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* PC用ヘッダー (md以上で表示) */}
         <div className="hidden md:block">
           <Header />
         </div>
 
-        {/* モバイル用ヘッダー (md未満で表示) */}
         <div className="md:hidden flex items-center justify-between p-3 border-b bg-linear-to-r from-[#F5F5F5] to-[#94BBD9] shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <SidebarButton
