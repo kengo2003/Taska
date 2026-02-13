@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Taska",
   description:
     "HCSでの「書く」をAIで「助ける」。あなたの学校生活に、頼れるAIアシスタント。",
+  icons: {
+  icon: "/Taska.ico",
+  },
 };
 
 export default function RootLayout({
