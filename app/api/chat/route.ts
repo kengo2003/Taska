@@ -13,45 +13,58 @@ import {
   LocalAttachment,
 } from "@/types/type";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    // 1. ユーザー認証 & メアド取得
     const cookieStore = await cookies();
-    const token = cookieStore.get(process.env.AUTH_COOKIE_NAME || "taska_session")?.value;
-    if (!token) return NextResponse.json({ error: "Unauthorized: No token" }, { status: 401 });
+    const token = cookieStore.get(
+      process.env.AUTH_COOKIE_NAME || "taska_session",
+    )?.value;
+    if (!token)
+      return NextResponse.json(
+        { error: "Unauthorized: No token" },
+        { status: 401 },
+      );
 
     let userId: string;
     let userEmail: string = "";
 
     try {
-      // まずアクセストークンとして検証を試みる
       const claims = await verifyAccessToken(token);
       userId = claims.sub as string;
       userEmail = (claims.email as string) || "unknown";
-    } catch (e: any) {
-      if (e.message === "Invalid token_use. Expected access token.") {
+    } catch (e: unknown) {
+      if (
+        e instanceof Error &&
+        e.message === "Invalid token_use. Expected access token."
+      ) {
         try {
           const claims = await verifyIdToken(token);
           userId = claims.sub as string;
           userEmail = (claims.email as string) || "unknown";
-        } catch (idError) {
+        } catch (idError: unknown) {
           console.error("Token verification failed (ID Token):", idError);
-          return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+          return NextResponse.json(
+            { error: "Unauthorized: Invalid token" },
+            { status: 401 },
+          );
         }
       } else {
-        // その他のエラー（期限切れなど）
         console.error("Token verification failed (Access Token):", e);
-        return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+        return NextResponse.json(
+          { error: "Unauthorized: Invalid token" },
+          { status: 401 },
+        );
       }
     }
 
-    // 2. リクエストデータの取得
     const formData = await request.formData();
     const query = formData.get("query") as string;
     let conversationId = formData.get("conversation_id") as string;
-    const incomingDifyConversationId = formData.get("dify_conversation_id") as string;
+    const incomingDifyConversationId = formData.get(
+      "dify_conversation_id",
+    ) as string;
     const files = formData.getAll("file") as File[];
     const inputsString = formData.get("inputs") as string;
 
@@ -62,22 +75,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Config Error" }, { status: 500 });
     }
 
-    const isNewSession = !conversationId || conversationId === "null" || conversationId === "";
+    const isNewSession =
+      !conversationId || conversationId === "null" || conversationId === "";
     if (isNewSession) {
       conversationId = Math.random().toString(36).substring(2, 10);
-      console.log(`[Chat] New Session Created: ${conversationId} by ${userEmail}`);
+      console.log(
+        `[Chat] New Session Created: ${conversationId} by ${userEmail}`,
+      );
     } else {
       console.log(`[Chat] Existing Session: ${conversationId} by ${userEmail}`);
     }
 
-    // ----------------------------------------------------------------
-    // 3. ファイル処理（並列化による高速化）
-    // ----------------------------------------------------------------
     const difyFiles: DifyFile[] = [];
     const localAttachments: LocalAttachment[] = [];
 
     if (files && files.length > 0) {
-      console.log(`[Chat] Processing ${files.length} files concurrently for ${userEmail}`);
+      console.log(
+        `[Chat] Processing ${files.length} files concurrently for ${userEmail}`,
+      );
 
       const uploadPromises = files.map(async (file) => {
         if (file.size === 0) return null;
@@ -85,28 +100,34 @@ export async function POST(request: Request) {
           const buffer = Buffer.from(await file.arrayBuffer());
           const fileKey = `users/${userId}/uploads/${conversationId}/${Date.now()}_${file.name}`;
 
-          // S3アップロードとDifyアップロードを同時に開始
-          const s3Promise = s3.send(new PutObjectCommand({ 
-            Bucket: BUCKET_NAME, Key: fileKey, Body: buffer, ContentType: file.type 
-          }));
+          const s3Promise = s3.send(
+            new PutObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: fileKey,
+              Body: buffer,
+              ContentType: file.type,
+            }),
+          );
 
           const difyUploadPromise = (async () => {
-             const uploadFormData = new FormData();
-             const blob = new Blob([buffer], { type: file.type });
-             uploadFormData.append("file", blob, file.name);
-             uploadFormData.append("user", userId);
+            const uploadFormData = new FormData();
+            const blob = new Blob([buffer], { type: file.type });
+            uploadFormData.append("file", blob, file.name);
+            uploadFormData.append("user", userId);
 
-             const res = await fetch(`${apiUrl}/files/upload`, {
-               method: "POST",
-               headers: { Authorization: `Bearer ${apiKey}` },
-               body: uploadFormData,
-             });
-             if (!res.ok) throw new Error(await res.text());
-             return res.json() as Promise<UploadResponse>;
+            const res = await fetch(`${apiUrl}/files/upload`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${apiKey}` },
+              body: uploadFormData,
+            });
+            if (!res.ok) throw new Error(await res.text());
+            return res.json() as Promise<UploadResponse>;
           })();
 
-          // 両方の完了を待つ
-          const [, uploadData] = await Promise.all([s3Promise, difyUploadPromise]);
+          const [, uploadData] = await Promise.all([
+            s3Promise,
+            difyUploadPromise,
+          ]);
 
           return {
             local: {
@@ -118,19 +139,17 @@ export async function POST(request: Request) {
               type: file.type.startsWith("image/") ? "image" : "document",
               transfer_method: "local_file",
               upload_file_id: uploadData.id,
-            } as DifyFile
+            } as DifyFile,
           };
-
-        } catch(e) { 
-          console.error(`[Chat] File Error for ${userEmail}:`, e); 
+        } catch (e) {
+          console.error(`[Chat] File Error for ${userEmail}:`, e);
           return null;
         }
       });
 
-      // 全ファイルの処理完了を待機
       const results = await Promise.all(uploadPromises);
-      
-      results.forEach(res => {
+
+      results.forEach((res) => {
         if (res) {
           localAttachments.push(res.local);
           difyFiles.push(res.dify);
@@ -138,61 +157,70 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Difyへチャット送信
     let inputs: Record<string, unknown> = {};
     try {
       if (inputsString) inputs = JSON.parse(inputsString);
-    } catch (e) { console.warn("Failed to parse inputs JSON:", e); }
+    } catch (e) {
+      console.warn("Failed to parse inputs JSON:", e);
+    }
     if (difyFiles.length > 0) inputs["doc"] = difyFiles;
 
     const chatPayload: ChatPayload = {
-      inputs, query, response_mode: "blocking", user: userId,
+      inputs,
+      query,
+      response_mode: "blocking",
+      user: userId,
       conversation_id: incomingDifyConversationId || undefined,
-      files: difyFiles.length > 0 ? difyFiles : undefined
+      files: difyFiles.length > 0 ? difyFiles : undefined,
     };
 
     const chatRes = await fetch(`${apiUrl}/chat-messages`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(chatPayload),
     });
 
     if (!chatRes.ok) {
-      throw new Error(`Dify API Error: ${chatRes.status} ${await chatRes.text()}`);
+      throw new Error(
+        `Dify API Error: ${chatRes.status} ${await chatRes.text()}`,
+      );
     }
 
-    const data = (await chatRes.json()) as any;
+    const data = await chatRes.json();
     const newDifyConversationId = data.conversation_id;
 
-    // ----------------------------------------------------------------
-    // 5. S3へ履歴保存（並列化による高速化）
-    // ----------------------------------------------------------------
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
-    
-    const formattedDate = getCurrentJSTTime(); 
+
+    const formattedDate = getCurrentJSTTime();
 
     const saveSessionPromise = (async () => {
-      let sessionData: { messages: Message[]; email?: string } = { messages: [] };
+      let sessionData: { messages: Message[]; email?: string } = {
+        messages: [],
+      };
       if (!isNewSession) {
-        const existing = await fetchJson<{ messages: Message[]; email?: string }>(sessionFilePath);
+        const existing = await fetchJson<{
+          messages: Message[];
+          email?: string;
+        }>(sessionFilePath);
         if (existing) sessionData = existing;
       }
-      
-      // ユーザーメッセージ保存
-      sessionData.messages.push({ 
-        role: "user", 
-        content: query, 
-        attachments: localAttachments, 
-        date: formattedDate // JST
+
+      sessionData.messages.push({
+        role: "user",
+        content: query,
+        attachments: localAttachments,
+        date: formattedDate,
       });
-      
-      // アシスタントメッセージ保存
-      sessionData.messages.push({ 
-        role: "assistant", 
-        content: data.answer, 
-        attachments: [], 
-        date: formattedDate // JST
+
+      sessionData.messages.push({
+        role: "assistant",
+        content: data.answer,
+        attachments: [],
+        date: formattedDate,
       });
 
       await saveJson(sessionFilePath, {
@@ -201,7 +229,7 @@ export async function POST(request: Request) {
         id: conversationId,
         type: "resume",
         email: userEmail,
-        date: formattedDate, // セッション自体の更新日時も追加しておくと便利
+        date: formattedDate,
       });
       console.log(`[Chat] Session saved: ${sessionFilePath}`);
     })();
@@ -209,27 +237,25 @@ export async function POST(request: Request) {
     const saveIndexPromise = (async () => {
       const index = (await fetchJson<ChatSession[]>(indexFilePath)) || [];
       if (isNewSession) {
-        // 新規追加
         index.unshift({
-          id: conversationId, 
-          title: query.substring(0, 20) || "新しいチャット", 
-          date: formattedDate, // JST
-          email: userEmail, 
-          messages: [], 
-          difyConversationId: newDifyConversationId, 
+          id: conversationId,
+          title: query.substring(0, 20) || "新しいチャット",
+          date: formattedDate,
+          email: userEmail,
+          messages: [],
+          difyConversationId: newDifyConversationId,
           type: "resume",
         });
       } else {
-        // 既存更新（先頭へ移動）
-        const targetIndex = index.findIndex(s => s.id === conversationId);
+        const targetIndex = index.findIndex((s) => s.id === conversationId);
         if (targetIndex > -1) {
           const target = index[targetIndex];
           index.splice(targetIndex, 1);
-          index.unshift({ 
-            ...target, 
-            date: formattedDate, // JST更新
-            email: userEmail, 
-            difyConversationId: newDifyConversationId 
+          index.unshift({
+            ...target,
+            date: formattedDate,
+            email: userEmail,
+            difyConversationId: newDifyConversationId,
           });
         }
       }
@@ -244,9 +270,11 @@ export async function POST(request: Request) {
       conversation_id: conversationId,
       dify_conversation_id: newDifyConversationId,
     });
-
   } catch (error: unknown) {
     console.error("[Chat] Server Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

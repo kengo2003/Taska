@@ -35,10 +35,8 @@ const FileUploadCard = ({
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 初期化が完了したかを追跡するRef
   const initializedRef = useRef(false);
 
-  // Effect 1: カテゴリデータの取得 (マウント時に一度だけ実行)
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -53,21 +51,17 @@ const FileUploadCard = ({
     fetchCategories();
   }, []);
 
-  // Effect 2: 初期選択の反映 (データ取得後、一度だけ実行)
   useEffect(() => {
-    // まだデータがない、または既に初期化済みの場合は何もしない
     if (categories.length === 0 || initializedRef.current) return;
 
     if (initialKbId) {
       setSelectedTableId(initialKbId);
     } else {
-      // 初期IDがない場合は先頭の要素を選択し、親に通知
       const firstId = categories[0].id;
       setSelectedTableId(firstId);
       onKbIdChange(firstId);
     }
 
-    // 初期化済みフラグを立てる
     initializedRef.current = true;
   }, [categories, initialKbId, onKbIdChange]);
 

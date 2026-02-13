@@ -83,7 +83,6 @@ export default function QABase() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  // 履歴の表示件数制御
   const [historyLimit, setHistoryLimit] = useState(5);
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
 
@@ -275,7 +274,7 @@ export default function QABase() {
       setMessages(finalMessages);
 
       if (!currentSessionId) {
-        fetchHistory(); // 最新履歴を再取得
+        fetchHistory();
       }
     } catch (error) {
       console.error("Chat Error:", error);

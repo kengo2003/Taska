@@ -1,9 +1,8 @@
 "use client";
 import { useState } from "react";
 
-// 結果の型定義
 type DeleteLog = {
-  email: string; // ここをusernameからemailに変更
+  email: string; 
   status: "deleted" | "failed";
   error?: string;
 };
@@ -22,7 +21,6 @@ export default function AdminDeletePage() {
     const text = await file.text();
     const lines = text.split("\n").map((line) => line.trim()).filter((line) => line);
 
-    // ヘッダー除去 (1行目が 'email' の場合)
     if (lines.length > 0 && lines[0].toLowerCase() === "email") {
       lines.shift();
     }
@@ -42,7 +40,6 @@ export default function AdminDeletePage() {
       const res = await fetch("/api/auth/delete-users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // API側が期待するキー名 "emails" で送信
         body: JSON.stringify({ emails: lines }),
       });
 

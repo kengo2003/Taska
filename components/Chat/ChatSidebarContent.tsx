@@ -22,12 +22,10 @@ export default function ChatSidebarContent({
 }: ChatSidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* 新規チャットボタン */}
       <div className="p-4 pb-2">
         <NewChatButton onClick={onNewChat} />
       </div>
 
-      {/* 履歴リスト */}
       <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-gray-200">
         <div className="text-xs font-bold text-gray-400 px-4 py-2 mb-1">
           履歴
@@ -57,12 +55,10 @@ export default function ChatSidebarContent({
                   }`}
                 />
                 <div className="flex-1 min-w-0">
-                  {/* タイトル */}
                   <div className="truncate text-sm mb-0.5 font-medium">
                     {session.title || "無題のチャット"}
                   </div>
-                  
-                  {/* 時間とメールアドレスの表示 */}
+
                   <div className="flex flex-col gap-0.5">
                     <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
                       {session.date}
@@ -74,7 +70,6 @@ export default function ChatSidebarContent({
           )}
         </div>
 
-        {/* もっと見るボタン */}
         {hasMore && onLoadMore && (
           <button
             onClick={onLoadMore}

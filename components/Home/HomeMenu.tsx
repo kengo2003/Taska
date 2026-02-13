@@ -36,7 +36,6 @@ const HomeMenu = () => {
 
   const isAdmin = me.groups.includes("Admin");
 
-  // レスポンシブ対応: モバイルは1列(grid-cols-1)、PC(md以上)は設定に応じて変更
   const gridColsClass = isAdmin ? "md:grid-cols-3" : "md:grid-cols-2";
 
   return (
@@ -51,7 +50,7 @@ const HomeMenu = () => {
         link="/qa"
         className="w-full bg-linear-to-b from-[#2978B2] to-[#12334C]"
       />
-      
+
       {isAdmin && (
         <MenuButton
           text="管理者"

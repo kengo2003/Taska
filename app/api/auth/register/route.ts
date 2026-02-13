@@ -33,7 +33,6 @@ export async function POST(req: Request) {
       const cleanPass = password.trim();
 
       try {
-        // ユーザー作成
         await client.send(
           new AdminCreateUserCommand({
             UserPoolId: userPoolId,
@@ -47,7 +46,6 @@ export async function POST(req: Request) {
         );
 
         try {
-          // パスワード固定化
           await client.send(
             new AdminSetUserPasswordCommand({
               UserPoolId: userPoolId,
@@ -58,7 +56,7 @@ export async function POST(req: Request) {
           );
 
           results.push({ email: cleanEmail, status: "OK" });
-        } catch (pwError: any) {
+        } catch (pwError: unknown) {
           console.warn(`パスワード設定失敗のためロールバック: ${cleanEmail}`);
 
           await client.send(
@@ -70,22 +68,30 @@ export async function POST(req: Request) {
 
           throw pwError;
         }
-      } catch (e: any) {
-        let msg = e.message;
-        if (e.name === "InvalidPasswordException") {
-          msg = "パスワードポリシー違反（文字数や種類を確認してください）";
-        } else if (e.name === "UsernameExistsException") {
-          msg = "既に登録済みのメールアドレスです";
+      } catch (e: unknown) {
+        let msg = "ユーザー作成に失敗しました";
+
+        if (e instanceof Error) {
+          msg = e.message;
+
+          if (e.name === "InvalidPasswordException") {
+            msg = "パスワードポリシー違反（文字数や種類を確認してください）";
+          } else if (e.name === "UsernameExistsException") {
+            msg = "既に登録済みのメールアドレスです";
+          }
         }
 
-        results.push({ email: cleanEmail, status: "Error", msg: msg });
+        results.push({ email: cleanEmail, status: "Error", msg });
       }
 
       await new Promise((r) => setTimeout(r, 100));
     }
 
     return NextResponse.json({ results });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "サーバーエラーが発生しました";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

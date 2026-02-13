@@ -16,7 +16,7 @@ const FileTableSection = ({ refreshTrigger }: { refreshTrigger: number }) => {
   const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [categories, setCategories] = useState<KnowledgeBaseOption[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -34,8 +34,16 @@ const FileTableSection = ({ refreshTrigger }: { refreshTrigger: number }) => {
     fetchCategories();
   }, []);
 
-  if (loading) return <div className="p-4 text-sm text-gray-500">Loading categories...</div>;
-  if (categories.length === 0) return <div className="p-4 text-sm text-red-500">ナレッジベースが見つかりません</div>;
+  if (loading)
+    return (
+      <div className="p-4 text-sm text-gray-500">Loading categories...</div>
+    );
+  if (categories.length === 0)
+    return (
+      <div className="p-4 text-sm text-red-500">
+        ナレッジベースが見つかりません
+      </div>
+    );
 
   return (
     <div className="w-full">
@@ -43,7 +51,6 @@ const FileTableSection = ({ refreshTrigger }: { refreshTrigger: number }) => {
         アップロード済みのファイル一覧
       </p>
 
-      {/* モバイルで全幅(w-full)、PCで幅固定(md:w-64) */}
       <div className="mb-4 md:mb-6 w-full md:w-64 px-1 md:px-0">
         <Select value={selectedTableId} onValueChange={setSelectedTableId}>
           <SelectTrigger className="bg-white">
@@ -58,9 +65,7 @@ const FileTableSection = ({ refreshTrigger }: { refreshTrigger: number }) => {
           </SelectContent>
         </Select>
       </div>
-      
-      {/* FileListSection自体は前回レスポンシブ対応済みですが、
-          コンテナの幅確保のため px-0 md:px-0 等で調整 */}
+
       {selectedTableId && (
         <div className="w-full overflow-x-hidden">
           <FileListSection

@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       secure: secureCookie, // httpならfalse
       sameSite: "lax",
       path: "/",
-      maxAge: expiresIn, // id tokenの有効期限に合わせる
+      maxAge: expiresIn,
     });
 
     if (accessToken) {
