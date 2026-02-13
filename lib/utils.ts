@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getCurrentJSTTime = (date?: Date | string): string => {
-  // 引数がなければ現在時刻、あればその時刻を使用
   const targetDate = date ? new Date(date) : new Date();
   
   return new Intl.DateTimeFormat("ja-JP", {

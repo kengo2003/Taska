@@ -16,7 +16,6 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ステップ1: メール送信 (APIを呼び出す)
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -47,7 +46,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // ステップ2: パスワード変更 (APIを呼び出す)
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");

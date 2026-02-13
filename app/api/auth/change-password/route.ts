@@ -30,7 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // AWS Cognitoに対してパスワード変更を要求
     const command = new ChangePasswordCommand({
       AccessToken: accessToken,
       PreviousPassword: oldPassword,

@@ -18,7 +18,7 @@ export default function LoginBase() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrorMessage(""); 
+    setErrorMessage("");
 
     try {
       if (!email.endsWith("@hcs.ac.jp")) {
@@ -34,10 +34,12 @@ export default function LoginBase() {
       const data = await loginRes.json().catch(() => null);
 
       if (!loginRes.ok) {
-        // ▼ ここでエラーメッセージを変換しています
         let errorMsg = data?.error;
-        
-        if (errorMsg === "auth_failed" || errorMsg === "NotAuthorizedException") {
+
+        if (
+          errorMsg === "auth_failed" ||
+          errorMsg === "NotAuthorizedException"
+        ) {
           errorMsg = "メールアドレスまたはパスワードが間違っています";
         } else if (errorMsg === "UserNotFoundException") {
           errorMsg = "アカウントが見つかりません";
@@ -46,15 +48,13 @@ export default function LoginBase() {
         throw new Error(errorMsg ?? "IDまたはパスワードが間違っています");
       }
 
-      // ログイン成功時はトップへ
       router.push("/");
-
     } catch (error) {
       console.error("Login failed:", error);
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "IDまたはパスワードを確認してください"
+          : "IDまたはパスワードを確認してください",
       );
       setIsLoading(false);
     }
@@ -70,7 +70,7 @@ export default function LoginBase() {
           height={150}
           className="object-contain w-auto h-full"
           priority
-          unoptimized 
+          unoptimized
         />
       </div>
 
@@ -96,8 +96,8 @@ export default function LoginBase() {
         />
 
         <div className="flex justify-end w-full mb-4">
-          <Link 
-            href="/auth/forgot-password" 
+          <Link
+            href="/auth/forgot-password"
             className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
           >
             パスワードを忘れた場合
@@ -105,7 +105,10 @@ export default function LoginBase() {
         </div>
 
         {errorMessage && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded relative" role="alert">
+          <div
+            className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 text-sm rounded relative"
+            role="alert"
+          >
             <span className="block sm:inline">{errorMessage}</span>
           </div>
         )}

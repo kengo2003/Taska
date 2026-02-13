@@ -33,7 +33,6 @@ export async function POST(req: Request) {
       const cleanPass = password.trim();
 
       try {
-        // ユーザー作成
         await client.send(
           new AdminCreateUserCommand({
             UserPoolId: userPoolId,
@@ -47,7 +46,6 @@ export async function POST(req: Request) {
         );
 
         try {
-          // パスワード固定化
           await client.send(
             new AdminSetUserPasswordCommand({
               UserPoolId: userPoolId,
