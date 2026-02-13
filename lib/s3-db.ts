@@ -20,13 +20,13 @@ export async function fetchJson<T>(key: string): Promise<T | null> {
     const response = await s3.send(command);
     const str = await response.Body?.transformToString();
     return str ? JSON.parse(str) : null;
-  } catch (e: any) {
-    if (e.name === "NoSuchKey") return null;
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "NoSuchKey") return null;
     throw e;
   }
 }
 
-export async function saveJson(key: string, data: any) {
+export async function saveJson<T>(key: string, data: T) {
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,

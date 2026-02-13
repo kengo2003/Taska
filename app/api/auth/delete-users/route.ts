@@ -50,9 +50,14 @@ export async function POST(request: Request) {
 
         await client.send(deleteCommand);
         results.push({ email, status: "deleted" });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Failed to delete ${email}:`, error);
-        results.push({ email, status: "failed", error: error.message });
+
+        results.push({
+          email,
+          status: "failed",
+          error: error instanceof Error ? error.message : "削除に失敗しました",
+        });
       }
     }
 

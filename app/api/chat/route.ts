@@ -34,13 +34,16 @@ export async function POST(request: Request) {
       const claims = await verifyAccessToken(token);
       userId = claims.sub as string;
       userEmail = (claims.email as string) || "unknown";
-    } catch (e: any) {
-      if (e.message === "Invalid token_use. Expected access token.") {
+    } catch (e: unknown) {
+      if (
+        e instanceof Error &&
+        e.message === "Invalid token_use. Expected access token."
+      ) {
         try {
           const claims = await verifyIdToken(token);
           userId = claims.sub as string;
           userEmail = (claims.email as string) || "unknown";
-        } catch (idError) {
+        } catch (idError: unknown) {
           console.error("Token verification failed (ID Token):", idError);
           return NextResponse.json(
             { error: "Unauthorized: Invalid token" },
@@ -186,7 +189,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = (await chatRes.json()) as any;
+    const data = await chatRes.json();
     const newDifyConversationId = data.conversation_id;
 
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;

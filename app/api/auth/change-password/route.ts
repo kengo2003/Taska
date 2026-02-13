@@ -39,20 +39,26 @@ export async function POST(request: Request) {
     await client.send(command);
 
     return NextResponse.json({ message: "パスワード変更成功" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Change Password Error:", error);
+
+    const name = error instanceof Error ? error.name : "";
 
     let errorMessage = "パスワード変更に失敗しました";
 
-    if (error.name === "NotAuthorizedException") {
-      errorMessage =
-        "現在のパスワードが間違っているか、セッションが切れています。";
-    } else if (error.name === "InvalidPasswordException") {
-      errorMessage =
-        "新しいパスワードの要件（文字数、大文字小文字など）を満たしていません。";
-    } else if (error.name === "LimitExceededException") {
-      errorMessage =
-        "試行回数が多すぎます。しばらく待ってから再試行してください。";
+    switch (name) {
+      case "NotAuthorizedException":
+        errorMessage =
+          "現在のパスワードが間違っているか、セッションが切れています。";
+        break;
+      case "InvalidPasswordException":
+        errorMessage =
+          "新しいパスワードの要件（文字数、大文字小文字など）を満たしていません。";
+        break;
+      case "LimitExceededException":
+        errorMessage =
+          "試行回数が多すぎます。しばらく待ってから再試行してください。";
+        break;
     }
 
     return NextResponse.json({ error: errorMessage }, { status: 400 });

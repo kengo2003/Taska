@@ -30,28 +30,28 @@ export interface KnowledgeBaseOption {
   label: string;
 }
 
-export type UploadState = {
+export interface UploadState {
   success: boolean;
   message: string;
   data?: JSON;
-};
+}
 
-export type MessageAttachment = {
+export interface MessageAttachment {
   name: string;
   url: string;
   type: "image" | "file";
-};
+}
 
 export type LocalAttachment = MessageAttachment;
 
-export type Message = {
+export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   date?: string;
   attachments?: MessageAttachment[];
-};
+}
 
-export type ChatSession = {
+export interface ChatSession {
   id: string;
   title: string;
   date: string;
@@ -59,7 +59,7 @@ export type ChatSession = {
   messages: Message[];
   difyConversationId?: string;
   type?: "qa" | "resume";
-};
+}
 
 export interface MenuButtonProps {
   text: string;

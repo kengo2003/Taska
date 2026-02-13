@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errText }, { status: chatRes.status });
     }
 
-    const data = (await chatRes.json()) as any;
+    const data = await chatRes.json();
 
     if (data.answer && typeof data.answer === "string") {
       data.answer = data.answer
