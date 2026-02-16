@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 type DeleteLog = {
-  email: string; 
+  email: string;
   status: "deleted" | "failed";
   error?: string;
 };
@@ -19,7 +19,10 @@ export default function AdminDeletePage() {
     }
 
     const text = await file.text();
-    const lines = text.split("\n").map((line) => line.trim()).filter((line) => line);
+    const lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line);
 
     if (lines.length > 0 && lines[0].toLowerCase() === "email") {
       lines.shift();
@@ -68,7 +71,8 @@ export default function AdminDeletePage() {
             <b>この操作は取り消せません。</b>
           </li>
           <li>
-            CSVファイルの1行目はヘッダー（例: <code>email</code>）として無視されます。
+            CSVファイルの1行目はヘッダー（例: <code>email</code>
+            ）として無視されます。
           </li>
           <li>
             削除対象の<b>「メールアドレス」</b>を1列目に記載してください。

@@ -262,6 +262,7 @@ export default function QABase() {
 
       const serverSessionId = data.conversation_id;
       const serverDifyId = data.dify_conversation_id;
+      const serverSources = data.sources;
 
       setCurrentSessionId(serverSessionId);
       setDifyConversationId(serverDifyId);
@@ -269,6 +270,7 @@ export default function QABase() {
       const assistantMessage: Message = {
         role: "assistant",
         content: data.answer,
+        sources: serverSources,
       };
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
@@ -381,7 +383,7 @@ export default function QABase() {
                                   width={500}
                                   height={500}
                                   sizes="120px"
-                                  className="w-auto h-auto max-w-[120px] max-h-[120px] object-contain"
+                                  className="w-auto h-auto max-w-30 max-h-30 object-contain"
                                   unoptimized
                                 />
                               </div>
@@ -392,7 +394,7 @@ export default function QABase() {
                                 onClick={(e) => handleFileClick(e, att.url)}
                                 className="block hover:opacity-80 transition-opacity cursor-pointer"
                               >
-                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
+                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-50">
                                   <div className="w-5 h-5 text-blue-500 shrink-0" />
                                   <span className="font-medium text-gray-700 text-xs truncate">
                                     {att.name}
@@ -450,6 +452,7 @@ export default function QABase() {
                               ? messages[idx - 1].content
                               : ""
                           }
+                          sources={msg.sources}
                         />
                       )}
                     </div>
@@ -481,7 +484,7 @@ export default function QABase() {
                         className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7"
                       >
                         <div className="w-3 h-3 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-30">
                           {file.name}
                         </span>
                         <button

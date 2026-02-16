@@ -320,6 +320,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       const serverSessionId = data.conversation_id;
       const newDifyId = data.dify_conversation_id;
 
+      const sources = data.sources || [];
+
       if (serverSessionId) {
         setCurrentSessionId(serverSessionId);
         if (newDifyId) setDifyConversationId(newDifyId);
@@ -348,6 +350,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         role: "assistant",
         content: data.answer,
         attachments: assistantAttachments,
+        sources: sources,
       };
 
       const finalMessages = [...tempMessages, assistantMessage];
@@ -509,7 +512,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                                   />
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-[200px]">
+                                <div className="flex items-center gap-2 bg-white/50 p-2 rounded border border-blue-200/50 hover:bg-blue-50 transition-colors w-fit max-w-50">
                                   <div className="w-5 h-5 text-blue-500 shrink-0" />
                                   <span className="font-medium text-gray-700 text-xs truncate">
                                     {att.name}
@@ -551,6 +554,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                               ? messages[idx - 1].content
                               : ""
                           }
+                          sources={msg.sources}
                         />
                       )}
                     </div>
@@ -593,7 +597,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         <button
                           key={index}
                           onClick={() => handleTemplateClick(template.prompt)}
-                          className="shrink-0 flex items-center gap-2 p-2 md:p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-[150px] md:min-w-[180px] max-w-[180px] md:max-w-60"
+                          className="shrink-0 flex items-center gap-2 p-2 md:p-3 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left shadow-sm group min-w-37.5 md:min-w-45 max-w-45 md:max-w-60"
                         >
                           <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-white transition-colors shrink-0">
                             {template.icon}
@@ -629,7 +633,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                         className="relative bg-white border border-gray-200 rounded-md p-1.5 flex items-center gap-2 shadow-sm pr-7"
                       >
                         <div className="w-3 h-3 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-30">
                           {file.name}
                         </span>
                         <button

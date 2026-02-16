@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
+import CurrentUserStatus from "../Home/CurrentUserStatus";
+import LogoutButton from "../Home/LogoutButton";
 
 type HeaderProps = {
   isOpen?: boolean;
@@ -36,7 +38,10 @@ const Header = ({ isOpen, setIsOpen }: HeaderProps) => {
         </Link>
       </div>
 
-      <div className="w-8 h-8" />
+      <div className="flex justify-end items-center gap-3 p-4">
+        <CurrentUserStatus />
+        <LogoutButton />
+      </div>
     </div>
   );
 };

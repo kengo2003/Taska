@@ -174,6 +174,13 @@ export async function POST(request: Request) {
 
     const data = await chatRes.json();
 
+    const retrieverResources = data.metadata?.retriever_resources || [];
+    console.log("[QA] Retriever Resources Count:", retrieverResources.length);
+    const sources: any = Array.from(
+      new Set(retrieverResources.map((res: any) => res.document_name)),
+    ).filter(Boolean);
+    console.log("[QA] Extracted Sources:", sources);
+
     if (data.answer && typeof data.answer === "string") {
       data.answer = data.answer
         .replace(/https?:\/\/[^)]+\/v1\/files\//g, "/files/")
@@ -183,7 +190,6 @@ export async function POST(request: Request) {
 
     const sessionFilePath = `users/${userId}/chat/sessions/${conversationId}.json`;
     const indexFilePath = `users/${userId}/chat/index.json`;
-
     const formattedDate = getCurrentJSTTime();
 
     const saveSessionPromise = (async () => {
@@ -198,18 +204,28 @@ export async function POST(request: Request) {
         if (existing) sessionData = existing;
       }
 
-      sessionData.messages.push({
+      const newUserMsg: Message = {
         role: "user",
         content: query,
         attachments: localAttachments,
         date: formattedDate,
-      });
-      sessionData.messages.push({
+      };
+
+      const newAssistantMsg: Message = {
         role: "assistant",
         content: data.answer,
         attachments: [],
         date: formattedDate,
-      });
+        sources: sources,
+      };
+
+      sessionData.messages = [
+        ...sessionData.messages,
+        newUserMsg,
+        newAssistantMsg,
+      ];
+
+      console.log("[QA] Final Data to save:", JSON.stringify(newAssistantMsg));
 
       await saveJson(sessionFilePath, {
         messages: sessionData.messages,
@@ -219,8 +235,17 @@ export async function POST(request: Request) {
         email: userEmail,
         date: formattedDate,
       });
+
       console.log(
         `[QA] Session saved: ${sessionFilePath} (User: ${userEmail})`,
+      );
+
+      const checkData = await fetchJson<any>(sessionFilePath);
+      console.log(
+        `[VERIFY S3] Read back "sources" exists:`,
+        checkData?.messages?.[checkData.messages.length - 1]?.sources
+          ? "YES"
+          : "NO",
       );
     })();
 
@@ -236,6 +261,7 @@ export async function POST(request: Request) {
           messages: [],
           difyConversationId: newDifyConversationId,
           type: "qa",
+          sources: sources,
         });
       } else {
         const targetIndex = index.findIndex((s) => s.id === conversationId);
@@ -247,6 +273,7 @@ export async function POST(request: Request) {
             date: formattedDate,
             email: userEmail,
             difyConversationId: newDifyConversationId,
+            sources: sources,
           });
         }
       }
@@ -258,6 +285,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...data,
+      sources: sources,
       conversation_id: conversationId,
       dify_conversation_id: newDifyConversationId,
     });
