@@ -97,7 +97,6 @@ export async function POST(request: Request) {
             }),
           );
 
-          // Difyアップロード
           const difyUploadPromise = (async () => {
             const uploadFormData = new FormData();
             const blob = new Blob([buffer], { type: file.type });
@@ -149,7 +148,7 @@ export async function POST(request: Request) {
     const chatPayload: ChatPayload = {
       inputs: {},
       query: query || "",
-      response_mode: "streaming", // ★ここを streaming に変更
+      response_mode: "blocking",
       user: userId,
       conversation_id: incomingDifyConversationId || undefined,
       files: difyFiles.length > 0 ? difyFiles : undefined,
@@ -164,7 +163,7 @@ export async function POST(request: Request) {
       body: JSON.stringify(chatPayload),
     });
 
-    if (!chatRes.ok || !chatRes.body) {
+    if (!chatRes.ok) {
       const errText = await chatRes.text();
       console.error(
         `[QA] Dify API Error for ${userEmail}: ${chatRes.status} ${errText}`,

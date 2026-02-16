@@ -109,7 +109,6 @@ export async function POST(request: Request) {
             }),
           );
 
-          // Difyアップロード
           const difyUploadPromise = (async () => {
             const uploadFormData = new FormData();
             const blob = new Blob([buffer], { type: file.type });
