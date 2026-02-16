@@ -262,6 +262,7 @@ export default function QABase() {
 
       const serverSessionId = data.conversation_id;
       const serverDifyId = data.dify_conversation_id;
+      const serverSources = data.sources;
 
       setCurrentSessionId(serverSessionId);
       setDifyConversationId(serverDifyId);
@@ -269,6 +270,7 @@ export default function QABase() {
       const assistantMessage: Message = {
         role: "assistant",
         content: data.answer,
+        sources: serverSources,
       };
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
@@ -450,6 +452,7 @@ export default function QABase() {
                               ? messages[idx - 1].content
                               : ""
                           }
+                          sources={msg.sources}
                         />
                       )}
                     </div>

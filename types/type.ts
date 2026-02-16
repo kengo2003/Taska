@@ -49,6 +49,7 @@ export interface Message {
   content: string;
   date?: string;
   attachments?: MessageAttachment[];
+  sources?: string[];
 }
 
 export interface ChatSession {
@@ -59,6 +60,7 @@ export interface ChatSession {
   messages: Message[];
   difyConversationId?: string;
   type?: "qa" | "resume";
+  sources?: string[];
 }
 
 export interface MenuButtonProps {

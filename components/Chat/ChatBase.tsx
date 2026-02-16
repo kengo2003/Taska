@@ -320,6 +320,8 @@ export default function ChatBase({ mode }: ChatBaseProps) {
       const serverSessionId = data.conversation_id;
       const newDifyId = data.dify_conversation_id;
 
+      const sources = data.sources || [];
+
       if (serverSessionId) {
         setCurrentSessionId(serverSessionId);
         if (newDifyId) setDifyConversationId(newDifyId);
@@ -348,6 +350,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
         role: "assistant",
         content: data.answer,
         attachments: assistantAttachments,
+        sources: sources,
       };
 
       const finalMessages = [...tempMessages, assistantMessage];
@@ -551,6 +554,7 @@ export default function ChatBase({ mode }: ChatBaseProps) {
                               ? messages[idx - 1].content
                               : ""
                           }
+                          sources={msg.sources}
                         />
                       )}
                     </div>

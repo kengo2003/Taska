@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const { messageId, vote, content, userPrompt, timestamp } = body;
+    const { messageId, vote, content, userPrompt, timestamp, sources } = body;
 
     const fileId = uuidv4();
 
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       user_query: userPrompt,
       ai_response: content,
       created_at: timestamp,
+      sources: sources || [],
     };
 
     const command = new PutObjectCommand({
