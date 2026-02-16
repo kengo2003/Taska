@@ -41,7 +41,9 @@ export async function GET(
         try {
           const claims = await verifyAccessToken(token);
           if (claims.sub) userId = claims.sub;
-        } catch (e) {}
+        } catch (e) {
+          console.log("error: token");
+        }
       }
 
       const apiKey = process.env.DIFY_QA_API_KEY || process.env.DIFY_API_KEY;

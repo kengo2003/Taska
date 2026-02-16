@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-linear-to-b from-white via-[#EBF5FF] to-[#A6D6F3] p-4">
-      <div className="mb-8 relative w-full max-w-[350px] h-16 md:h-20 flex justify-center">
+      <div className="mb-8 relative w-full max-w-87.5 h-16 md:h-20 flex justify-center">
         <Image
           src="/TaskaLogo.png"
           alt="Taska Logo"

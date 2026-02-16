@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export const getCurrentJSTTime = (date?: Date | string): string => {
   const targetDate = date ? new Date(date) : new Date();
-  
+
   return new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Tokyo",
     year: "numeric",
