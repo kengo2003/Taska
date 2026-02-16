@@ -62,7 +62,7 @@ export const ChatInput = ({
               ) : (
                 <Paperclip className="w-3 h-3 text-blue-500" />
               )}
-              <span className="text-xs font-bold text-gray-700 truncate max-w-[120px]">
+              <span className="text-xs font-bold text-gray-700 truncate max-w-30">
                 {file.name}
               </span>
               <button

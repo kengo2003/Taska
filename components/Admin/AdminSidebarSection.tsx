@@ -3,11 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FileUp, UserPlus, LayoutDashboard, Trash2 } from "lucide-react";
+import { RxHome } from "react-icons/rx";
 
 const AdminSidebarSection = () => {
   const pathname = usePathname();
 
   const menuItems = [
+    {
+      name: "メニューへ戻る",
+      href: "/",
+      icon: <RxHome className="w-5 h-5" />,
+    },
     {
       name: "ファイルアップロード",
       href: "/admin",

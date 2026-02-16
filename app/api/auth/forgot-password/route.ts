@@ -41,11 +41,13 @@ export async function POST(req: Request) {
     await client.send(command);
 
     return NextResponse.json({ message: "Code sent" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Forgot Password Error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to send code";
     return NextResponse.json(
-      { error: error.message || "Failed to send code" },
-      { status: 500 }
+      { error: errorMessage || "Failed to send code" },
+      { status: 500 },
     );
   }
 }
