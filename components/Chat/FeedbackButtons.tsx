@@ -9,12 +9,14 @@ type FeedbackButtonsProps = {
   messageId: string;
   responseContent: string;
   userPrompt: string;
+  sources?: string[];
 };
 
 export default function FeedbackButtons({
   messageId,
   responseContent,
   userPrompt,
+  sources = [],
 }: FeedbackButtonsProps) {
   const [currentVote, setCurrentVote] = useState<VoteType>(null);
   const [isSending, setIsSending] = useState(false);
@@ -37,6 +39,7 @@ export default function FeedbackButtons({
           vote: nextVote,
           content: responseContent,
           userPrompt: userPrompt,
+          sources: sources,
           timestamp: new Date().toISOString(),
         }),
       });

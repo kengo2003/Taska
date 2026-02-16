@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (!email || !code || !newPassword) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -46,16 +46,19 @@ export async function POST(req: Request) {
     await client.send(command);
 
     return NextResponse.json({ message: "Password reset successful" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Confirm Reset Error:", error);
-    
-    let msg = error.message;
-    if (error.name === "CodeMismatchException") msg = "認証コードが間違っています";
-    if (error.name === "ExpiredCodeException") msg = "認証コードの有効期限が切れています";
+    let msg = "Failed to reset password";
 
-    return NextResponse.json(
-      { error: msg || "Failed to reset password" },
-      { status: 400 }
-    );
+    if (error instanceof Error) {
+      msg = error.message;
+      if (error.name === "CodeMismatchException") {
+        msg = "認証コードが間違っています";
+      } else if (error.name === "ExpiredCodeException") {
+        msg = "認証コードの有効期限が切れています";
+      }
+    }
+
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

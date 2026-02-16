@@ -1,9 +1,15 @@
 "use client";
 import { useState } from "react";
 
+interface RegisterLog {
+  email: string;
+  status: "OK" | "Error";
+  msg?: string;
+}
+
 export default function BulkRegisterPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<RegisterLog[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
