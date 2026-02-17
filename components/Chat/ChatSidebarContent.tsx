@@ -61,7 +61,14 @@ export default function ChatSidebarContent({
 
                   <div className="flex flex-col gap-0.5">
                     <div className="text-[10px] opacity-70 truncate font-mono text-gray-500">
-                      {session.date}
+                      {session.date ? new Date(session.date).toLocaleString('ja-JP', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'Asia/Tokyo'
+                      }) : ""}
                     </div>
                   </div>
                 </div>
