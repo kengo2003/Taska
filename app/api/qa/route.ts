@@ -121,7 +121,7 @@ export async function POST(request: Request) {
             local: {
               name: file.name,
               type: file.type.startsWith("image/") ? "image" : "file",
-              url: `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`,
+              url: `/files/${fileKey}`,
             } as LocalAttachment,
             dify: {
               type: file.type.startsWith("image/") ? "image" : "document",
